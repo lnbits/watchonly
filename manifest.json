@@ -1,0 +1,9 @@
+{
+    "repos": [
+        {
+            "id": "watchonly",
+            "organisation": "lnbits",
+            "repository": "watchonly"
+        }
+    ]
+}
