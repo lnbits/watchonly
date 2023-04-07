@@ -7,6 +7,15 @@ async function serialPortConfig(path) {
     data() {
       return {}
     },
-    methods: {}
+    methods: {},
+    created: async function () {
+      const accountPubKey = await TrezorConnect.getPublicKey({
+        path: "m/49'/0'/0'",
+        showOnTrezor: true,
+        coin: 'btc'
+      })
+
+      console.log('### TrezorConnect.getPublicKey', accountPubKey)
+    }
   })
 }

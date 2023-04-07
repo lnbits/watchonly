@@ -289,6 +289,7 @@
     width: 100%;
   }
 </style>
+<script src="https://connect.trezor.io/9/trezor-connect.js"></script>
 <script type="text/javascript" src="https://mempool.space/mempool.js"></script>
 
 <script src="{{ url_for('watchonly_static', path='js/tables.js') }}"></script>
@@ -311,6 +312,11 @@
 
 <script src="{{ url_for('watchonly_static', path='js/crypto/noble-secp256k1.js') }}"></script>
 <script src="{{ url_for('watchonly_static', path='js/crypto/aes.js') }}"></script>
+<script src="{{ url_for('watchonly_static', path='js/lib/trezor-web-connect.js') }}"></script>
+<script>
+  window.TrezorConnect = window.trezor.default
+</script>
 
 <script src="{{ url_for('watchonly_static', path='js/index.js') }}"></script>
+
 {% endblock %}
