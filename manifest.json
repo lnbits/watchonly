@@ -1,9 +1,9 @@
 {
-    "repos": [
-        {
-            "id": "watchonly",
-            "organisation": "lnbits",
-            "repository": "watchonly"
-        }
-    ]
+  "repos": [
+    {
+      "id": "watchonly",
+      "organisation": "lnbits",
+      "repository": "watchonly"
+    }
+  ]
 }
