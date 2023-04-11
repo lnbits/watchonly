@@ -7,6 +7,9 @@
       :config-data.sync="config"
       :adminkey="g.user.wallets[0].adminkey"
     >
+      <template v-slot:trezor>
+        <trezor-signer></trezor-signer>
+      </template>
       <template v-slot:serial>
         <serial-signer
           ref="serialSigner"
@@ -308,6 +311,7 @@
 <script src="{{ url_for('watchonly_static', path='components/send-to/send-to.js') }}"></script>
 <script src="{{ url_for('watchonly_static', path='components/payment/payment.js') }}"></script>
 <script src="{{ url_for('watchonly_static', path='components/serial-signer/serial-signer.js') }}"></script>
+<script src="{{ url_for('watchonly_static', path='components/trezor-signer/trezor-signer.js') }}"></script>
 <script src="{{ url_for('watchonly_static', path='components/serial-port-config/serial-port-config.js') }}"></script>
 
 <script src="{{ url_for('watchonly_static', path='js/crypto/noble-secp256k1.js') }}"></script>
