@@ -1,5 +1,12 @@
 <div>
-  <q-btn v-if="isConecting" split unelevated color="primary" label="Trezor">
+  <q-btn
+    v-if="isConecting"
+    @click="connectToDevice"
+    split
+    unelevated
+    color="primary"
+    label="Trezor"
+  >
     <q-spinner color="secodary"></q-spinner>
   </q-btn>
   <q-btn-dropdown
@@ -12,14 +19,11 @@
   >
     <q-list>
       <q-item clickable v-close-popup>
-        <q-item-section  @click="connectToDevice" >
+        <q-item-section @click="connectToDevice">
           <q-item-label>Connect</q-item-label>
-          <q-item-label caption
-            >Connect to your trezor device.</q-item-label
-          >
+          <q-item-label caption>Connect to your trezor device.</q-item-label>
         </q-item-section>
       </q-item>
-
     </q-list>
   </q-btn-dropdown>
 
@@ -27,9 +31,10 @@
     <q-card v-if="features" class="q-pa-lg q-pt-md">
       <q-card-section>
         <h5>
-          Connected to Trezor device
-
-          "<span v-text="features.payload.label"></span>"
+          Connected to Trezor device "<span
+            v-text="features.payload.label"
+          ></span
+          >"
         </h5>
         <q-input
           filled

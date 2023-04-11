@@ -8,7 +8,11 @@
       :adminkey="g.user.wallets[0].adminkey"
     >
       <template v-slot:trezor>
-        <trezor-signer></trezor-signer>
+        <trezor-signer
+          ref="trezorSigner"
+          :network="config.network"
+          @device:connected="handleDeviceConnected"
+        ></trezor-signer>
       </template>
       <template v-slot:serial>
         <serial-signer
@@ -16,6 +20,7 @@
           :network="config.network"
           :sats-denominated="config.sats_denominated"
           @signed:psbt="updateSignedPsbt"
+          @device:connected="handleDeviceConnected"
           class="q-pr-lg float-right"
         ></serial-signer>
       </template>
@@ -28,7 +33,7 @@
       :sats-denominated="config.sats_denominated"
       :network="config.network"
       :addresses="addresses"
-      :serial-signer-ref="$refs.serialSigner"
+      :serial-signer-ref="signerDevice"
       @accounts-update="updateAccounts"
       @new-receive-address="showAddressDetailsWithConfirmation"
     >
@@ -161,7 +166,7 @@
         :utxos="utxos.data"
         :mempool-endpoint="mempoolHostname"
         :adminkey="g.user.wallets[0].adminkey"
-        :serial-signer-ref="$refs.serialSigner"
+        :serial-signer-ref="signerDevice"
         :sats-denominated="config.sats_denominated"
         :network="config.network"
         @broadcast-done="handleBroadcastSuccess"

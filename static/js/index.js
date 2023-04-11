@@ -58,7 +58,9 @@ const watchOnly = async () => {
         network: null,
 
         showEnterSignedPsbt: false,
-        signedBase64Psbt: null
+        signedBase64Psbt: null,
+
+        connectedDeviceType: null
       }
     },
     computed: {
@@ -69,6 +71,12 @@ const watchOnly = async () => {
           hostname += '/testnet'
         }
         return hostname
+      },
+      signerDevice: function () {
+        if (this.connectedDeviceType === 'trezor-device') {
+          return this.$refs.trezorSigner
+        }
+        return this.$refs.serialSigner
       }
     },
 
@@ -423,6 +431,10 @@ const watchOnly = async () => {
         this.showPayment = false
         await this.refreshAddresses()
         await this.scanAddressWithAmount()
+      },
+      handleDeviceConnected: async function (deviceType) {
+        console.log('### handleDeviceConnected', deviceType)
+        this.connectedDeviceType = deviceType
       }
     },
     created: async function () {

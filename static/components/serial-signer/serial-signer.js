@@ -124,6 +124,7 @@ async function serialSigner(path) {
           this.writer = textEncoder.writable.getWriter()
 
           await this.hwwPing()
+          this.$emit('device:connected', 'usb-device')
 
           return true
         } catch (error) {
