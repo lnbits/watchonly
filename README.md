@@ -1,4 +1,5 @@
 # Onchain Wallet (watch-only)
+## This is an [LNbits](https://github.com/lnbits/lnbits) extension
 
 ## Monitor an onchain wallet and generate addresses for onchain payments
 
