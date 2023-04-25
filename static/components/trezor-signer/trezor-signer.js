@@ -40,10 +40,11 @@ async function trezorSigner(path) {
       },
       hwwXpub: async function (accountPath) {
         console.log('### hwwXpub', accountPath, this.network)
+        const coin = this.network === 'Mainnet' ? 'btc' : 'test'
         const data = await TrezorConnect.getPublicKey({
           path: accountPath,
           showOnTrezor: true,
-          coin: 'btc'
+          coin
         })
         console.log('### pubkey', data)
         this.xpubData = {
