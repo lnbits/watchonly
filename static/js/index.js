@@ -185,6 +185,10 @@ const watchOnly = async () => {
         this.$refs.paymentRef.updateSignedPsbt(psbtBase64)
       },
 
+      updateSignedTx: async function (txHex) {
+        this.$refs.paymentRef.updateSignedTx(txHex)
+      },
+
       showEnterSignedPsbtDialog: function () {
         this.signedBase64Psbt = ''
         this.showEnterSignedPsbt = true

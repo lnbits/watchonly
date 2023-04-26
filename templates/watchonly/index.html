@@ -11,6 +11,7 @@
         <trezor-signer
           ref="trezorSigner"
           :network="config.network"
+          @signed:tx="updateSignedTx"
           @device:connected="handleDeviceConnected"
         ></trezor-signer>
       </template>

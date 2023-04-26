@@ -87,6 +87,7 @@ async function trezorSigner(path) {
         if (!data.success) {
           throw new Error(data.payload.error)
         }
+        this.$emit('signed:tx', { serializedTx: data.payload.serializedTx, feeValue: txData.feeValue})
       },
       isSendingPsbt: function () {
         return false

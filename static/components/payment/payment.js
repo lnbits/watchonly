@@ -274,6 +274,24 @@ async function payment(path) {
           this.showChecking = false
         }
       },
+      updateSignedTx: async function (txData) {
+        try {
+          this.showChecking = true
+
+          const data = await this.extractTx( txData.serializedTx)
+          this.showFinalTx = true
+          if (data) {
+            this.signedTx = data.tx_json
+            this.signedTx.fee = txData.feeValue
+            this.signedTxHex =  txData.serializedTx
+          } else {
+            this.signedTx = null
+            this.signedTxHex = null
+          }
+        } finally {
+          this.showChecking = false
+        }
+      },
 
       fetchUtxoHexForPsbt: async function (psbtBase64) {
         if (this.tx?.inputs && this.tx?.inputs.length) return this.tx.inputs
@@ -311,6 +329,28 @@ async function payment(path) {
           this.$q.notify({
             type: 'warning',
             message: 'Cannot finalize PSBT!',
+            caption: `${error}`,
+            timeout: 10000
+          })
+          LNbits.utils.notifyApiError(error)
+        }
+      },
+      extractTx: async function (txHex) {
+        try {
+          const {data} = await LNbits.api.request(
+            'PUT',
+            '/watchonly/api/v1/tx/extract',
+            this.adminkey,
+            {
+              tx_hex: txHex,
+              network: this.network
+            }
+          )
+          return data
+        } catch (error) {
+          this.$q.notify({
+            type: 'warning',
+            message: 'Cannot extract transaction for tx hex!',
             caption: `${error}`,
             timeout: 10000
           })
