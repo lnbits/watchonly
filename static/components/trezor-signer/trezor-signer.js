@@ -49,7 +49,7 @@ async function trezorSigner(path) {
           throw new Error(data.payload.error)
         }
         this.xpubData = {
-          xpub: data.payload.xpubSegwit || data.payload.xpub,
+          xpub: data.payload.xpub,
           fingerprint: data.payload.fingerprint.toString(16)
         }
       },
@@ -57,23 +57,27 @@ async function trezorSigner(path) {
         return this.xpubData
       },
       hwwSendPsbt: async function (_, txData) {
+        console.log('#### hwwSendPsbt.txData', JSON.stringify(txData))
         const coin = this.network === 'Mainnet' ? 'btc' : 'test'
         const inputs = txData.inputs.map(input => ({
           address_n: mapDerivationPathToTrezor(`${input.accountPath}/${input.branch_index}/${input.address_index}`),
           prev_index: input.vout,
           prev_hash: input.tx_id,
-          amount: input.amount
+          amount: input.amount,
+          script_type: mapInputAccountTypeToTrezor(input.accountType)
         }))
         const outputs = txData.outputs.map(out => {
           const o = {
             amount: out.amount,
             script_type: 'PAYTOADDRESS'
-
           }
           if (out.accountPath) {
-            o.address_n =  mapDerivationPathToTrezor(`${out.accountPath}/${out.branch_index}/${out.address_index}`)
+            o.address_n = mapDerivationPathToTrezor(`${out.accountPath}/${out.branch_index}/${out.address_index}`)
           } else {
             o.address = out.address
+          }
+          if (out.accountType) {
+            o.script_type = mapOutputAccountTypeToTrezor(out.accountType)
           }
           return o
         })
@@ -82,18 +86,19 @@ async function trezorSigner(path) {
           inputs,
           outputs
         }
+        console.log('### tx', JSON.stringify(tx))
         const data = await TrezorConnect.signTransaction(tx)
         console.log('### signed tx', JSON.stringify(data))
         if (!data.success) {
           throw new Error(data.payload.error)
         }
-        this.$emit('signed:tx', { serializedTx: data.payload.serializedTx, feeValue: txData.feeValue})
+        this.$emit('signed:tx', { serializedTx: data.payload.serializedTx, feeValue: txData.feeValue })
       },
       isSendingPsbt: function () {
         return false
       },
       hwwShowPasswordDialog: function () {
-        
+
       }
     },
 

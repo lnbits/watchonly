@@ -138,7 +138,7 @@ async function payment(path) {
         } catch (error) {
           this.$q.notify({
             type: 'warning',
-            message: 'Cannot check and sign PSBT!',
+            message: 'Cannot check and sign transaction!',
             caption: `${error}`,
             timeout: 10000
           })
@@ -211,6 +211,7 @@ async function payment(path) {
 
         if (!excludeChange) {
           const change = this.createChangeOutput()
+          console.log('### change', JSON.stringify(change))
           const diffAmount = this.selectedAmount - this.totalPayedAmount
           if (diffAmount >= this.DUST_LIMIT) {
             tx.outputs.push(change)
@@ -227,12 +228,14 @@ async function payment(path) {
         const walletAcount =
           this.accounts.find(w => w.id === change.wallet) || {meta: {}}
 
+        console.log('### change walletAcount', JSON.stringify(walletAcount))
         return {
           address: change.address,
           address_index: change.addressIndex,
           branch_index: change.isChange ? 1 : 0,
           wallet: walletAcount.id,
-          accountPath: walletAcount.meta.accountPath
+          accountPath: walletAcount.meta.accountPath,
+          accountType: walletAcount.type
         }
       },
       selectChangeAddress: function (account) {
