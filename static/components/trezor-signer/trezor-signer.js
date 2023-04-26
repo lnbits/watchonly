@@ -35,6 +35,9 @@ async function trezorSigner(path) {
       isConnected: function () {
         return this.connected
       },
+      isTaprootSupported: function () {
+        return true
+      },
       isAuthenticated: async function () {
         return true
       },
@@ -57,7 +60,6 @@ async function trezorSigner(path) {
         return this.xpubData
       },
       hwwSendPsbt: async function (_, txData) {
-        console.log('#### hwwSendPsbt.txData', JSON.stringify(txData))
         const coin = this.network === 'Mainnet' ? 'btc' : 'test'
         const inputs = txData.inputs.map(input => ({
           address_n: mapDerivationPathToTrezor(`${input.accountPath}/${input.branch_index}/${input.address_index}`),
@@ -86,9 +88,7 @@ async function trezorSigner(path) {
           inputs,
           outputs
         }
-        console.log('### tx', JSON.stringify(tx))
         const data = await TrezorConnect.signTransaction(tx)
-        console.log('### signed tx', JSON.stringify(data))
         if (!data.success) {
           throw new Error(data.payload.error)
         }

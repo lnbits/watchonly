@@ -108,10 +108,10 @@ async function payment(path) {
           const p2trUtxo = this.utxos.find(
             u => u.selected && u.accountType === 'p2tr'
           )
-          if (p2trUtxo) {
+          if (p2trUtxo && !this.serialSignerRef.isTaprootSupported()) {
             this.$q.notify({
               type: 'warning',
-              message: 'Taproot Signing not supported yet!',
+              message: 'Taproot Signing not supported for this device!',
               caption: 'Please manually deselect the Taproot UTXOs',
               timeout: 10000
             })
@@ -211,7 +211,6 @@ async function payment(path) {
 
         if (!excludeChange) {
           const change = this.createChangeOutput()
-          console.log('### change', JSON.stringify(change))
           const diffAmount = this.selectedAmount - this.totalPayedAmount
           if (diffAmount >= this.DUST_LIMIT) {
             tx.outputs.push(change)
@@ -228,7 +227,6 @@ async function payment(path) {
         const walletAcount =
           this.accounts.find(w => w.id === change.wallet) || {meta: {}}
 
-        console.log('### change walletAcount', JSON.stringify(walletAcount))
         return {
           address: change.address,
           address_index: change.addressIndex,

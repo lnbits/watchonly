@@ -178,6 +178,9 @@ async function serialSigner(path) {
       isConnected: function () {
         return !!this.selectedPort
       },
+      isTaprootSupported: function () {
+        return false
+      },
       isAuthenticated: function () {
         return this.hww.authenticated
       },
