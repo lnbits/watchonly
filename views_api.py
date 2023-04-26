@@ -34,6 +34,7 @@ from .models import (
     CreatePsbt,
     CreateWallet,
     ExtractPsbt,
+    ExtractTx,
     SerializedTransaction,
     SignedTransaction,
     WalletAccount,
@@ -336,6 +337,27 @@ async def api_psbt_extract_tx(data: ExtractPsbt):
             )
         signed_tx = SignedTransaction(tx_hex=tx_hex, tx_json=json.dumps(tx))
         return signed_tx.dict()
+    except Exception as e:
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e))
+
+
+@watchonly_ext.put("/api/v1/tx/extract", dependencies=[Depends(require_admin_key)])
+async def api_extract_tx(data: ExtractTx):
+    network = NETWORKS["main"] if data.network == "Mainnet" else NETWORKS["test"]
+    try:
+        transaction = Transaction.from_string(data.tx_hex)
+        tx = {
+            "locktime": transaction.locktime,
+            "version": transaction.version,
+            "outputs": [],
+            # "fee": psbt.fee(),
+        }
+
+        for out in transaction.vout:
+            tx["outputs"].append(
+                {"amount": out.value, "address": out.script_pubkey.address(network)}
+            )
+        return {"tx_json": tx}
     except Exception as e:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e))
 
