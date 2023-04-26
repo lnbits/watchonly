@@ -145,7 +145,6 @@ async function walletList(path) {
 
           await this.refreshWalletAccounts()
         } catch (error) {
-          console.warn('### error', error)
           LNbits.utils.notifyApiError(error)
         }
       },

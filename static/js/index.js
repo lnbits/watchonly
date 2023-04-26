@@ -433,7 +433,6 @@ const watchOnly = async () => {
         await this.scanAddressWithAmount()
       },
       handleDeviceConnected: async function (deviceType) {
-        console.log('### handleDeviceConnected', deviceType)
         this.connectedDeviceType = deviceType
       }
     },
@@ -442,17 +441,12 @@ const watchOnly = async () => {
         await this.refreshAddresses()
         await this.scanAddressWithAmount()
       }
-      console.log(
-        '### window.trezor.TrezorConnect;',
-        window.trezor.TrezorConnect
-      )
-      console.log('### window.trezor', window.trezor)
 
       await TrezorConnect.init({
         lazyLoad: true, // this param will prevent iframe injection until TrezorConnect.method will be called
         manifest: {
-          email: 'developer@xyz.com',
-          appUrl: 'http://your.application.com'
+          email: 'vlad@lnbits.com',
+          appUrl: 'http://lnbits.com'
         }
       })
     }

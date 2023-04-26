@@ -132,7 +132,6 @@ async function payment(path) {
               feeRate: this.tx.fee_rate,
               feeValue: this.feeValue
             }
-            console.log('### this.tx', JSON.stringify(this.tx))
             await this.serialSignerRef.hwwSendPsbt(this.psbtBase64, txData)
             await this.serialSignerRef.isSendingPsbt()
           }
@@ -198,7 +197,6 @@ async function payment(path) {
             fingerprint: w.fingerprint
           }))
         }
-        console.log('### this.utxos', JSON.stringify(this.utxos))
         tx.inputs = this.utxos
           .filter(utxo => utxo.selected)
           .map(mapUtxoToPsbtInput)
@@ -206,7 +204,6 @@ async function payment(path) {
             a.tx_id < b.tx_id ? -1 : a.tx_id > b.tx_id ? 1 : a.vout - b.vout
           )
 
-        console.log('### this.sendToList', JSON.stringify(this.sendToList))
         tx.outputs = this.sendToList.map(out => ({
           address: out.address,
           amount: out.amount
