@@ -127,10 +127,12 @@ async function payment(path) {
 
           if (this.psbtBase64) {
             const txData = {
+              inputs: this.tx.inputs,
               outputs: this.tx.outputs,
               feeRate: this.tx.fee_rate,
               feeValue: this.feeValue
             }
+            console.log('### this.tx', JSON.stringify(this.tx))
             await this.serialSignerRef.hwwSendPsbt(this.psbtBase64, txData)
             await this.serialSignerRef.isSendingPsbt()
           }
@@ -196,6 +198,7 @@ async function payment(path) {
             fingerprint: w.fingerprint
           }))
         }
+        console.log('### this.utxos', JSON.stringify(this.utxos))
         tx.inputs = this.utxos
           .filter(utxo => utxo.selected)
           .map(mapUtxoToPsbtInput)
@@ -203,6 +206,7 @@ async function payment(path) {
             a.tx_id < b.tx_id ? -1 : a.tx_id > b.tx_id ? 1 : a.vout - b.vout
           )
 
+        console.log('### this.sendToList', JSON.stringify(this.sendToList))
         tx.outputs = this.sendToList.map(out => ({
           address: out.address,
           amount: out.amount
@@ -224,13 +228,14 @@ async function payment(path) {
       createChangeOutput: function () {
         const change = this.changeAddress
         const walletAcount =
-          this.accounts.find(w => w.id === change.wallet) || {}
+          this.accounts.find(w => w.id === change.wallet) || {meta: {}}
 
         return {
           address: change.address,
           address_index: change.addressIndex,
           branch_index: change.isChange ? 1 : 0,
-          wallet: walletAcount.id
+          wallet: walletAcount.id,
+          accountPath: walletAcount.meta.accountPath
         }
       },
       selectChangeAddress: function (account) {

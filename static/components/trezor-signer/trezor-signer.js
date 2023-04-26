@@ -57,7 +57,27 @@ async function trezorSigner(path) {
         return this.xpubData
       },
       hwwSendPsbt: function (psbtBase64, txData) {
-        console.log('### hwwSendPsbt', psbtBase64, txData)
+        console.log('### trezorSendPsbt txData', JSON.stringify(txData))
+        const inputs = txData.inputs.map(input => ({
+          address_n: mapDerivationPathToTrezor(`${input.accountPath}/${input.branch_index}/${input.address_index}`),
+          prev_index:input.vout,
+          prev_hash: input.tx_id,
+          amount: input.amount
+        }))
+        // console.log('### trezorSendPsbt inputs', JSON.stringify(inputs))
+        const outputs = txData.outputs.map(out => ({
+          address_n: out.accountPath ? mapDerivationPathToTrezor(`${out.accountPath}/${out.branch_index}/${out.address_index}`): undefined,
+          address: out.accountPath ? undefined : out.address,
+          amount: out.amount,
+          script_type: 'PAYTOADDRESS'
+        }))
+        // console.log('### trezorSendPsbt outputs', JSON.stringify(outputs))
+        const tx = {
+          coin: 'btc',
+          inputs,
+          outputs
+        }
+        console.log('### trezorSendPsbt tx', JSON.stringify(tx))
       },
       isSendingPsbt: function () {
         console.log('### isSendingPsbt')
