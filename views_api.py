@@ -350,7 +350,6 @@ async def api_extract_tx(data: ExtractTx):
             "locktime": transaction.locktime,
             "version": transaction.version,
             "outputs": [],
-            # "fee": psbt.fee(),
         }
 
         for out in transaction.vout:
