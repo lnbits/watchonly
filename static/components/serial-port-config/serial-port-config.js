@@ -7,8 +7,6 @@ async function serialPortConfig(path) {
     data() {
       return {}
     },
-    methods: {},
-    created: async function () {
-    }
+    methods: {}
   })
 }
