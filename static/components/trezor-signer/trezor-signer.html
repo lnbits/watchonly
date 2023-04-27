@@ -1,0 +1,43 @@
+<div>
+  <q-btn
+    
+    @click="connectToDevice"
+    split
+    unelevated
+    color="primary"
+    :text-color="connected ?'green' : ''"
+    label="Trezor"
+  >
+    <q-spinner v-if="isConecting" color="secodary"></q-spinner>
+  </q-btn>
+
+
+  <q-dialog v-model="showFeatures" position="top">
+    <q-card v-if="features" class="q-pa-lg q-pt-md">
+      <q-card-section>
+        <h5>
+          Connected to Trezor device "<span
+            v-text="features.payload.label"
+          ></span
+          >"
+        </h5>
+        <q-input
+          filled
+          dense
+          for="serial-port-console"
+          v-model.trim="featuresJson"
+          type="textarea"
+          rows="20"
+          cols="200"
+          label="Device Features"
+        ></q-input>
+      </q-card-section>
+
+      <q-card-section>
+        <div class="row q-mt-lg">
+          <q-btn v-close-popup flat color="grey" class="q-ml-auto">Close</q-btn>
+        </div>
+      </q-card-section>
+    </q-card>
+  </q-dialog>
+</div>

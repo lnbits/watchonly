@@ -86,6 +86,11 @@ class ExtractPsbt(BaseModel):
     network = "Mainnet"
 
 
+class ExtractTx(BaseModel):
+    tx_hex = ""
+    network = "Mainnet"
+
+
 class SignedTransaction(BaseModel):
     tx_hex: Optional[str]
     tx_json: Optional[str]

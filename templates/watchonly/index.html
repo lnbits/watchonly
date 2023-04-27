@@ -7,12 +7,21 @@
       :config-data.sync="config"
       :adminkey="g.user.wallets[0].adminkey"
     >
+      <template v-slot:trezor>
+        <trezor-signer
+          ref="trezorSigner"
+          :network="config.network"
+          @signed:tx="updateSignedTx"
+          @device:connected="handleDeviceConnected"
+        ></trezor-signer>
+      </template>
       <template v-slot:serial>
         <serial-signer
           ref="serialSigner"
           :network="config.network"
           :sats-denominated="config.sats_denominated"
           @signed:psbt="updateSignedPsbt"
+          @device:connected="handleDeviceConnected"
           class="q-pr-lg float-right"
         ></serial-signer>
       </template>
@@ -25,7 +34,7 @@
       :sats-denominated="config.sats_denominated"
       :network="config.network"
       :addresses="addresses"
-      :serial-signer-ref="$refs.serialSigner"
+      :serial-signer-ref="signerDevice"
       @accounts-update="updateAccounts"
       @new-receive-address="showAddressDetailsWithConfirmation"
     >
@@ -158,7 +167,7 @@
         :utxos="utxos.data"
         :mempool-endpoint="mempoolHostname"
         :adminkey="g.user.wallets[0].adminkey"
-        :serial-signer-ref="$refs.serialSigner"
+        :serial-signer-ref="signerDevice"
         :sats-denominated="config.sats_denominated"
         :network="config.network"
         @broadcast-done="handleBroadcastSuccess"
@@ -289,6 +298,7 @@
     width: 100%;
   }
 </style>
+<script src="https://connect.trezor.io/9/trezor-connect.js"></script>
 <script type="text/javascript" src="https://mempool.space/mempool.js"></script>
 
 <script src="{{ url_for('watchonly_static', path='js/tables.js') }}"></script>
@@ -307,10 +317,16 @@
 <script src="{{ url_for('watchonly_static', path='components/send-to/send-to.js') }}"></script>
 <script src="{{ url_for('watchonly_static', path='components/payment/payment.js') }}"></script>
 <script src="{{ url_for('watchonly_static', path='components/serial-signer/serial-signer.js') }}"></script>
+<script src="{{ url_for('watchonly_static', path='components/trezor-signer/trezor-signer.js') }}"></script>
 <script src="{{ url_for('watchonly_static', path='components/serial-port-config/serial-port-config.js') }}"></script>
 
 <script src="{{ url_for('watchonly_static', path='js/crypto/noble-secp256k1.js') }}"></script>
 <script src="{{ url_for('watchonly_static', path='js/crypto/aes.js') }}"></script>
+<script src="{{ url_for('watchonly_static', path='js/lib/trezor-web-connect.js') }}"></script>
+<script>
+  window.TrezorConnect = window.trezor.default
+</script>
 
 <script src="{{ url_for('watchonly_static', path='js/index.js') }}"></script>
+
 {% endblock %}

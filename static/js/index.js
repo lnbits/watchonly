@@ -11,6 +11,7 @@ const watchOnly = async () => {
   await sendTo('static/components/send-to/send-to.html')
   await payment('static/components/payment/payment.html')
   await serialSigner('static/components/serial-signer/serial-signer.html')
+  await trezorSigner('static/components/trezor-signer/trezor-signer.html')
   await serialPortConfig(
     'static/components/serial-port-config/serial-port-config.html'
   )
@@ -57,7 +58,9 @@ const watchOnly = async () => {
         network: null,
 
         showEnterSignedPsbt: false,
-        signedBase64Psbt: null
+        signedBase64Psbt: null,
+
+        connectedDeviceType: null
       }
     },
     computed: {
@@ -68,6 +71,12 @@ const watchOnly = async () => {
           hostname += '/testnet'
         }
         return hostname
+      },
+      signerDevice: function () {
+        if (this.connectedDeviceType === 'trezor-device') {
+          return this.$refs.trezorSigner
+        }
+        return this.$refs.serialSigner
       }
     },
 
@@ -174,6 +183,10 @@ const watchOnly = async () => {
 
       updateSignedPsbt: async function (psbtBase64) {
         this.$refs.paymentRef.updateSignedPsbt(psbtBase64)
+      },
+
+      updateSignedTx: async function (txHex) {
+        this.$refs.paymentRef.updateSignedTx(txHex)
       },
 
       showEnterSignedPsbtDialog: function () {
@@ -422,6 +435,9 @@ const watchOnly = async () => {
         this.showPayment = false
         await this.refreshAddresses()
         await this.scanAddressWithAmount()
+      },
+      handleDeviceConnected: async function (deviceType) {
+        this.connectedDeviceType = deviceType
       }
     },
     created: async function () {
@@ -429,6 +445,14 @@ const watchOnly = async () => {
         await this.refreshAddresses()
         await this.scanAddressWithAmount()
       }
+
+      await TrezorConnect.init({
+        lazyLoad: true, // this param will prevent iframe injection until TrezorConnect.method will be called
+        manifest: {
+          email: 'vlad@lnbits.com',
+          appUrl: 'http://lnbits.com'
+        }
+      })
     }
   })
 }

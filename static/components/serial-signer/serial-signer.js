@@ -124,6 +124,7 @@ async function serialSigner(path) {
           this.writer = textEncoder.writable.getWriter()
 
           await this.hwwPing()
+          this.$emit('device:connected', 'usb-device')
 
           return true
         } catch (error) {
@@ -176,6 +177,9 @@ async function serialSigner(path) {
 
       isConnected: function () {
         return !!this.selectedPort
+      },
+      isTaprootSupported: function () {
+        return false
       },
       isAuthenticated: function () {
         return this.hww.authenticated

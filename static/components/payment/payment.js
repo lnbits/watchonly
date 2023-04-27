@@ -108,10 +108,10 @@ async function payment(path) {
           const p2trUtxo = this.utxos.find(
             u => u.selected && u.accountType === 'p2tr'
           )
-          if (p2trUtxo) {
+          if (p2trUtxo && !this.serialSignerRef.isTaprootSupported()) {
             this.$q.notify({
               type: 'warning',
-              message: 'Taproot Signing not supported yet!',
+              message: 'Taproot Signing not supported for this device!',
               caption: 'Please manually deselect the Taproot UTXOs',
               timeout: 10000
             })
@@ -127,6 +127,7 @@ async function payment(path) {
 
           if (this.psbtBase64) {
             const txData = {
+              inputs: this.tx.inputs,
               outputs: this.tx.outputs,
               feeRate: this.tx.fee_rate,
               feeValue: this.feeValue
@@ -137,7 +138,7 @@ async function payment(path) {
         } catch (error) {
           this.$q.notify({
             type: 'warning',
-            message: 'Cannot check and sign PSBT!',
+            message: 'Cannot check and sign transaction!',
             caption: `${error}`,
             timeout: 10000
           })
@@ -224,13 +225,15 @@ async function payment(path) {
       createChangeOutput: function () {
         const change = this.changeAddress
         const walletAcount =
-          this.accounts.find(w => w.id === change.wallet) || {}
+          this.accounts.find(w => w.id === change.wallet) || {meta: {}}
 
         return {
           address: change.address,
           address_index: change.addressIndex,
           branch_index: change.isChange ? 1 : 0,
-          wallet: walletAcount.id
+          wallet: walletAcount.id,
+          accountPath: walletAcount.meta.accountPath,
+          accountType: walletAcount.type
         }
       },
       selectChangeAddress: function (account) {
@@ -264,6 +267,24 @@ async function payment(path) {
           if (data) {
             this.signedTx = JSON.parse(data.tx_json)
             this.signedTxHex = data.tx_hex
+          } else {
+            this.signedTx = null
+            this.signedTxHex = null
+          }
+        } finally {
+          this.showChecking = false
+        }
+      },
+      updateSignedTx: async function (txData) {
+        try {
+          this.showChecking = true
+
+          const data = await this.extractTx( txData.serializedTx)
+          this.showFinalTx = true
+          if (data) {
+            this.signedTx = data.tx_json
+            this.signedTx.fee = txData.feeValue
+            this.signedTxHex =  txData.serializedTx
           } else {
             this.signedTx = null
             this.signedTxHex = null
@@ -309,6 +330,28 @@ async function payment(path) {
           this.$q.notify({
             type: 'warning',
             message: 'Cannot finalize PSBT!',
+            caption: `${error}`,
+            timeout: 10000
+          })
+          LNbits.utils.notifyApiError(error)
+        }
+      },
+      extractTx: async function (txHex) {
+        try {
+          const {data} = await LNbits.api.request(
+            'PUT',
+            '/watchonly/api/v1/tx/extract',
+            this.adminkey,
+            {
+              tx_hex: txHex,
+              network: this.network
+            }
+          )
+          return data
+        } catch (error) {
+          this.$q.notify({
+            type: 'warning',
+            message: 'Cannot extract transaction for tx hex!',
             caption: `${error}`,
             timeout: 10000
           })
