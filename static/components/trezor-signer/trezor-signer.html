@@ -1,31 +1,16 @@
 <div>
   <q-btn
-    v-if="isConecting"
+    
     @click="connectToDevice"
     split
     unelevated
     color="primary"
+    :text-color="connected ?'green' : ''"
     label="Trezor"
   >
-    <q-spinner color="secodary"></q-spinner>
+    <q-spinner v-if="isConecting" color="secodary"></q-spinner>
   </q-btn>
-  <q-btn-dropdown
-    v-else
-    @click="connectToDevice"
-    split
-    unelevated
-    color="primary"
-    label="Trezor"
-  >
-    <q-list>
-      <q-item clickable v-close-popup>
-        <q-item-section @click="connectToDevice">
-          <q-item-label>Connect</q-item-label>
-          <q-item-label caption>Connect to your trezor device.</q-item-label>
-        </q-item-section>
-      </q-item>
-    </q-list>
-  </q-btn-dropdown>
+
 
   <q-dialog v-model="showFeatures" position="top">
     <q-card v-if="features" class="q-pa-lg q-pt-md">
