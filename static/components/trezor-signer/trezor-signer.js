@@ -10,7 +10,7 @@ async function trezorSigner(path) {
         featuresJson: null,
         showFeatures: false,
         connected: false,
-        isConecting: false,
+        isConnecting: false,
         xpubData: { xpub: null, fingerprint: null }
       }
     },
@@ -18,7 +18,7 @@ async function trezorSigner(path) {
     methods: {
       connectToDevice: async function () {
         try {
-          this.isConecting = true
+          this.isConnecting = true
           this.features = await TrezorConnect.getFeatures()
           this.featuresJson = JSON.stringify(this.features, null, 2)
           this.showFeatures = true
@@ -28,7 +28,7 @@ async function trezorSigner(path) {
           this.showFeatures = false
           this.connected = false
         } finally {
-          this.isConecting = false
+          this.isConnecting = false
         }
       },
 

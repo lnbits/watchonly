@@ -7,7 +7,7 @@ async function walletConfig(path) {
     props: ['total', 'config-data', 'adminkey'],
     data: function () {
       return {
-        networOptions: ['Mainnet', 'Testnet'],
+        networkOptions: ['Mainnet', 'Testnet'],
         internalConfig: {},
         show: false
       }

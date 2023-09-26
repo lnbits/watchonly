@@ -33,9 +33,9 @@
         <q-input filled dense v-model.number="config.change_gap_limit" type="number" min="0"
           label="Change Gap Limit"></q-input>
 
-        <q-select filled dense emit-value v-model="config.network" :options="networOptions" label="Network"></q-select>
+        <q-select filled dense emit-value v-model="config.network" :options="networkOptions" label="Network"></q-select>
 
-        <q-toggle :label="config.sats_denominated ? 'sats denominated' : 'BTC denominated'" color="secodary"
+        <q-toggle :label="config.sats_denominated ? 'sats denominated' : 'BTC denominated'" color="secondary"
           v-model="config.sats_denominated"></q-toggle>
 
         <div class="row q-mt-lg">
