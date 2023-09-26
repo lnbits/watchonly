@@ -3,5 +3,5 @@
   "short_description": "Onchain watch only wallets",
   "tile": "/watchonly/static/bitcoin-wallet.png",
   "contributors": ["arcbtc", "motorina0"],
-  "min_lnbits_version": "0.XX.0"
+  "min_lnbits_version": "0.11.0"
 }
