@@ -47,7 +47,7 @@
           <q-btn
             unelevated
             class="btn-full"
-            color="secondary"
+            outline
             @click="scanAllAddresses"
             :disabled="scan.scanning == true || showPayment"
             >Scan Blockchain</q-btn
@@ -65,8 +65,8 @@
             v-if="!showPayment"
             split
             unelevated
+            outline
             label="New Payment"
-            color="secondary"
             class="btn-full"
             @click="goToPaymentView"
           >

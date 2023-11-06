@@ -35,7 +35,7 @@
 
         <q-select filled dense emit-value v-model="config.network" :options="networkOptions" label="Network"></q-select>
 
-        <q-toggle :label="config.sats_denominated ? 'sats denominated' : 'BTC denominated'" color="secondary"
+        <q-toggle :label="config.sats_denominated ? 'sats denominated' : 'BTC denominated'" color="primary"
           v-model="config.sats_denominated"></q-toggle>
 
         <div class="row q-mt-lg">

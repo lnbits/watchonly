@@ -52,7 +52,7 @@
           <q-td auto-width>
             <q-btn
               size="sm"
-              color="accent"
+              color="primary"
               round
               dense
               @click="props.row.expanded= !props.row.expanded"
@@ -70,7 +70,7 @@
               <q-badge
                 v-if="props.row.confirmed"
                 @click="props.row.expanded = !props.row.expanded"
-                color="green"
+                color="primary"
                 class="q-mr-md cursor-pointer"
               >
                 Confirmed
@@ -78,7 +78,7 @@
               <q-badge
                 v-if="!props.row.confirmed"
                 @click="props.row.expanded = !props.row.expanded"
-                color="orange"
+                color="secondary"
                 class="q-mr-md cursor-pointer"
               >
                 Pending
@@ -88,14 +88,13 @@
           <q-td key="address" :props="props">
             <div>
               <a
-                class="text-secondary"
                 style="color: unset"
                 :href="'https://' + mempoolEndpoint + '/address/' + props.row.address"
                 target="_blank"
               >
                 {{props.row.address}}</a
               >
-              <q-badge v-if="props.row.isChange" color="orange" class="q-mr-md">
+              <q-badge v-if="props.row.isChange" color="primary" class="q-mr-md">
                 change
               </q-badge>
               <q-badge
@@ -127,7 +126,6 @@
               <div class="col-2 q-pr-lg">Transaction Id</div>
               <div class="col-10 q-pr-lg">
                 <a
-                  class="text-secondary"
                   style="color: unset"
                   :href="'https://' + mempoolEndpoint + '/tx/' + props.row.txId"
                   target="_blank"
