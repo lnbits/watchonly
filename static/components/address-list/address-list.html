@@ -53,7 +53,7 @@
         <q-td auto-width>
           <q-btn
             size="sm"
-            color="accent"
+            color="primary"
             round
             dense
             @click="props.row.expanded= !props.row.expanded"
@@ -64,7 +64,6 @@
         <q-td key="address" :props="props">
           <div>
             <a
-              class="text-secondary"
               style="color: unset"
               :href="'https://'+ mempoolEndpoint + '/address/' + props.row.address"
               target="_blank"
@@ -73,7 +72,7 @@
             >
             <q-badge
               v-if="props.row.branch_index === 1"
-              color="orange"
+              color="primary"
               class="q-mr-md"
               outline
             >

@@ -45,7 +45,7 @@
         <q-td auto-width>
           <q-btn
             size="sm"
-            color="accent"
+            color="primary"
             round
             dense
             @click="props.row.expanded = !props.row.expanded"
@@ -57,7 +57,7 @@
           <q-badge
             v-if="props.row.sent"
             @click="props.row.expanded = !props.row.expanded"
-            color="orange"
+            color="secondary"
             class="q-mr-md cursor-pointer"
           >
             {{props.row.confirmed ? 'Sent' : 'Sending...'}}
@@ -65,7 +65,7 @@
           <q-badge
             v-if="props.row.received"
             @click="props.row.expanded = !props.row.expanded"
-            color="green"
+            color="primary"
             class="q-mr-md cursor-pointer"
           >
             {{props.row.confirmed ? 'Received' : 'Receiving...'}}
@@ -80,7 +80,6 @@
         </q-td>
         <q-td key="address" :props="props">
           <a
-            class="text-secondary"
             v-if="!props.row.sameTxItems"
             style="color: unset"
             :href="'https://' + mempoolEndpoint + '/address/' + props.row.address"
@@ -106,7 +105,6 @@
             <div class="col-2 q-pr-lg">Transaction Id</div>
             <div class="col-10 q-pr-lg">
               <a
-                class="text-secondary"
                 style="color: unset"
                 :href="'https://' +mempoolEndpoint + '/tx/' + props.row.txId"
                 target="_blank"

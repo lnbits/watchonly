@@ -73,7 +73,7 @@
             <q-td auto-width>
               <q-btn
                 size="sm"
-                color="accent"
+                color="primary"
                 round
                 dense
                 @click="props.row.expanded= !props.row.expanded"
@@ -83,7 +83,7 @@
             <q-td key="new">
               <q-badge
                 size="lg"
-                color="secondary"
+                color="primary"
                 class="q-mr-md cursor-pointer"
                 @click="openGetFreshAddressDialog(props.row.id)"
               >
@@ -110,8 +110,8 @@
                 <div class="col-2 q-pr-lg"></div>
                 <div class="col-4 q-pr-lg">
                   <q-btn
-                    unelevated
-                    color="secondary"
+                    
+                    color="primary"
                     @click="openGetFreshAddressDialog(props.row.id)"
                     >New Receive Address</q-btn
                   >
@@ -196,7 +196,7 @@
                 <div class="col-4 q-pr-lg">
                   <q-btn
                     unelevated
-                    color="pink"
+                    color="grey"
                     icon="cancel"
                     @click="deleteWalletAccount(props.row.id)"
                     >Delete</q-btn
