@@ -2,6 +2,38 @@
   "name": "Onchain Wallet",
   "short_description": "Onchain watch only wallets",
   "tile": "/watchonly/static/bitcoin-wallet.png",
-  "contributors": ["arcbtc", "motorina0"],
-  "min_lnbits_version": "0.11.0"
+  "min_lnbits_version": "0.11.0",
+  "contributors": [
+    {
+      "name": "motorina0",
+      "uri": "https://github.com/motorina0",
+      "role": "Contributor"
+    },
+    {
+      "name": "arcbtc",
+      "uri": "https://github.com/arcbtc",
+      "role": "Contributor"
+    }
+  ],
+  "images": [
+    {
+      "uri": "https://raw.githubusercontent.com/lnbits/watchonly/main/static/1.jpg",
+      "link": "https://www.youtube.com/embed/Xx09tzeZIok?si=Ju9LjOfiZVPrlGGp"
+    },
+    {
+      "uri": "https://raw.githubusercontent.com/lnbits/watchonly/main/static/1.png"
+    },
+    {
+      "uri": "https://raw.githubusercontent.com/lnbits/watchonly/main/static/2.png"
+    },
+    {
+      "uri": "https://raw.githubusercontent.com/lnbits/watchonly/main/static/3.png"
+    },
+    {
+      "uri": "https://raw.githubusercontent.com/lnbits/watchonly/main/static/4.png"
+    }
+  ],
+  "description_md": "https://raw.githubusercontent.com/lnbits/watchonly/main/description.md",
+  "terms_and_conditions_md": "https://raw.githubusercontent.com/lnbits/watchonly/main/toc.md",
+  "license": "MIT"
 }
