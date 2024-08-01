@@ -1,5 +1,5 @@
 from sqlite3 import Row
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import Query
 from pydantic import BaseModel
@@ -69,9 +69,9 @@ class MasterPublicKey(BaseModel):
 
 
 class CreatePsbt(BaseModel):
-    masterpubs: List[MasterPublicKey]
-    inputs: List[TransactionInput]
-    outputs: List[TransactionOutput]
+    masterpubs: list[MasterPublicKey]
+    inputs: list[TransactionInput]
+    outputs: list[TransactionOutput]
     fee_rate: int
     tx_size: int
 
@@ -81,8 +81,8 @@ class SerializedTransaction(BaseModel):
 
 
 class ExtractPsbt(BaseModel):
-    psbtBase64 = ""  # // todo snake case
-    inputs: List[SerializedTransaction]
+    psbt_base64 = ""
+    inputs: list[SerializedTransaction]
     network = "Mainnet"
 
 
