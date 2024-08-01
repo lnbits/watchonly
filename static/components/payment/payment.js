@@ -224,8 +224,9 @@ async function payment(path) {
       },
       createChangeOutput: function () {
         const change = this.changeAddress
-        const walletAcount =
-          this.accounts.find(w => w.id === change.wallet) || {meta: {}}
+        const walletAcount = this.accounts.find(
+          w => w.id === change.wallet
+        ) || {meta: {}}
 
         return {
           address: change.address,
@@ -279,12 +280,12 @@ async function payment(path) {
         try {
           this.showChecking = true
 
-          const data = await this.extractTx( txData.serializedTx)
+          const data = await this.extractTx(txData.serializedTx)
           this.showFinalTx = true
           if (data) {
             this.signedTx = data.tx_json
             this.signedTx.fee = txData.feeValue
-            this.signedTxHex =  txData.serializedTx
+            this.signedTxHex = txData.serializedTx
           } else {
             this.signedTx = null
             this.signedTxHex = null

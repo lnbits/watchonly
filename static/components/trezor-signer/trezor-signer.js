@@ -11,7 +11,7 @@ async function trezorSigner(path) {
         showFeatures: false,
         connected: false,
         isConnecting: false,
-        xpubData: { xpub: null, fingerprint: null }
+        xpubData: {xpub: null, fingerprint: null}
       }
     },
 
@@ -62,7 +62,9 @@ async function trezorSigner(path) {
       hwwSendPsbt: async function (_, txData) {
         const coin = this.network === 'Mainnet' ? 'btc' : 'test'
         const inputs = txData.inputs.map(input => ({
-          address_n: mapDerivationPathToTrezor(`${input.accountPath}/${input.branch_index}/${input.address_index}`),
+          address_n: mapDerivationPathToTrezor(
+            `${input.accountPath}/${input.branch_index}/${input.address_index}`
+          ),
           prev_index: input.vout,
           prev_hash: input.tx_id,
           amount: input.amount,
@@ -74,7 +76,9 @@ async function trezorSigner(path) {
             script_type: 'PAYTOADDRESS'
           }
           if (out.accountPath) {
-            o.address_n = mapDerivationPathToTrezor(`${out.accountPath}/${out.branch_index}/${out.address_index}`)
+            o.address_n = mapDerivationPathToTrezor(
+              `${out.accountPath}/${out.branch_index}/${out.address_index}`
+            )
           } else {
             o.address = out.address
           }
@@ -92,16 +96,17 @@ async function trezorSigner(path) {
         if (!data.success) {
           throw new Error(data.payload.error)
         }
-        this.$emit('signed:tx', { serializedTx: data.payload.serializedTx, feeValue: txData.feeValue })
+        this.$emit('signed:tx', {
+          serializedTx: data.payload.serializedTx,
+          feeValue: txData.feeValue
+        })
       },
       isSendingPsbt: function () {
         return false
       },
-      hwwShowPasswordDialog: function () {
-
-      }
+      hwwShowPasswordDialog: function () {}
     },
 
-    created: async function () { }
+    created: async function () {}
   })
 }

@@ -1,6 +1,5 @@
 <div>
   <q-btn
-    
     @click="connectToDevice"
     split
     unelevated
@@ -10,7 +9,6 @@
   >
     <q-spinner v-if="isConnecting" color="secondary"></q-spinner>
   </q-btn>
-
 
   <q-dialog v-model="showFeatures" position="top">
     <q-card v-if="features" class="q-pa-lg q-pt-md">

@@ -78,10 +78,10 @@ const txSize = tx => {
       inp.accountType === 'p2wpkh'
         ? 27
         : inp.accountType === 'p2wsh'
-        ? 63.5
-        : inp.accountType === 'p2tr'
-        ? 16.5
-        : 0
+          ? 63.5
+          : inp.accountType === 'p2tr'
+            ? 16.5
+            : 0
     t +=
       outpoint +
       scriptSigLength +
@@ -103,12 +103,12 @@ const txSize = tx => {
       type === 'p2pkh'
         ? 25
         : type === 'p2wpkh'
-        ? 22
-        : type === 'p2sh'
-        ? 23
-        : type === 'p2wsh'
-        ? 34
-        : 34 // default to the largest size (p2tr included)
+          ? 22
+          : type === 'p2sh'
+            ? 23
+            : type === 'p2wsh'
+              ? 34
+              : 34 // default to the largest size (p2tr included)
     t += nValue + scriptPubKeyLength + scriptPubKey
     return t
   }, 0)
@@ -167,8 +167,8 @@ function satOrBtc(val, showUnit = true, showSats = false) {
   const value = showSats
     ? LNbits.utils.formatSat(val)
     : val == 0
-    ? 0.0
-    : (val / 100000000).toFixed(8)
+      ? 0.0
+      : (val / 100000000).toFixed(8)
   if (!showUnit) return value
   return showSats ? value + ' sat' : value + ' BTC'
 }

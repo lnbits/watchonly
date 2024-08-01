@@ -1301,10 +1301,10 @@
                     firstByte > 0xef
                       ? 4
                       : firstByte > 0xdf
-                      ? 3
-                      : firstByte > 0xbf
-                      ? 2
-                      : 1
+                        ? 3
+                        : firstByte > 0xbf
+                          ? 2
+                          : 1
 
                   if (i + bytesPerSequence <= end) {
                     var secondByte, thirdByte, fourthByte, tempCodePoint
@@ -3286,10 +3286,10 @@
                 i < 26
                   ? i + 65
                   : i < 52
-                  ? i + 71
-                  : i < 62
-                  ? i - 4
-                  : (i - 59) | 43)
+                    ? i + 71
+                    : i < 62
+                      ? i - 4
+                      : (i - 59) | 43)
             ] = i++
 
           /**
@@ -3648,11 +3648,11 @@
                   return err && typeof XMLHttpRequest !== 'undefined'
                     ? fetch.xhr(filename, options, callback)
                     : err
-                    ? callback(err)
-                    : callback(
-                        null,
-                        options.binary ? contents : contents.toString('utf8')
-                      )
+                      ? callback(err)
+                      : callback(
+                          null,
+                          options.binary ? contents : contents.toString('utf8')
+                        )
                 }
               )
 
@@ -3929,8 +3929,10 @@
                       ? NaN
                       : sign * Infinity
                     : exponent === 0 // denormal
-                    ? sign * 1.401298464324817e-45 * mantissa
-                    : sign * Math.pow(2, exponent - 150) * (mantissa + 8388608)
+                      ? sign * 1.401298464324817e-45 * mantissa
+                      : sign *
+                        Math.pow(2, exponent - 150) *
+                        (mantissa + 8388608)
                 }
 
                 exports.readFloatLE = readFloat_ieee754.bind(null, readUintLE)
@@ -4100,10 +4102,10 @@
                       ? NaN
                       : sign * Infinity
                     : exponent === 0 // denormal
-                    ? sign * 5e-324 * mantissa
-                    : sign *
-                      Math.pow(2, exponent - 1075) *
-                      (mantissa + 4503599627370496)
+                      ? sign * 5e-324 * mantissa
+                      : sign *
+                        Math.pow(2, exponent - 1075) *
+                        (mantissa + 4503599627370496)
                 }
 
                 exports.readDoubleLE = readDouble_ieee754.bind(
@@ -8380,8 +8382,8 @@
                     i === this.markedOffset
                       ? "'"
                       : columns || (i !== 0 && i !== k)
-                      ? ' '
-                      : ''
+                        ? ' '
+                        : ''
               }
               if (columns && hex !== ' ') {
                 while (hex.length < 3 * 16 + 3) hex += ' '
@@ -10620,13 +10622,13 @@
                     partial.length === 0
                       ? '[]'
                       : gap
-                      ? '[\n' +
-                        gap +
-                        partial.join(',\n' + gap) +
-                        '\n' +
-                        mind +
-                        ']'
-                      : '[' + partial.join(',') + ']'
+                        ? '[\n' +
+                          gap +
+                          partial.join(',\n' + gap) +
+                          '\n' +
+                          mind +
+                          ']'
+                        : '[' + partial.join(',') + ']'
                   gap = mind
                   return v
                 }
@@ -10661,13 +10663,13 @@
                   partial.length === 0
                     ? '{}'
                     : gap
-                    ? '{\n' +
-                      gap +
-                      partial.join(',\n' + gap) +
-                      '\n' +
-                      mind +
-                      '}'
-                    : '{' + partial.join(',') + '}'
+                      ? '{\n' +
+                        gap +
+                        partial.join(',\n' + gap) +
+                        '\n' +
+                        mind +
+                        '}'
+                      : '{' + partial.join(',') + '}'
                 gap = mind
                 return v
               default:
@@ -12347,8 +12349,8 @@
                 (fields[i].resolve().repeated
                   ? repeatedFields
                   : fields[i].map
-                  ? mapFields
-                  : normalFields
+                    ? mapFields
+                    : normalFields
                 ).push(fields[i])
 
             if (repeatedFields.length) {
@@ -14254,12 +14256,12 @@
                   (nested.fields !== undefined
                     ? Type.fromJSON
                     : nested.values !== undefined
-                    ? Enum.fromJSON
-                    : nested.methods !== undefined
-                    ? Service.fromJSON
-                    : nested.id !== undefined
-                    ? Field.fromJSON
-                    : Namespace.fromJSON)(names[i], nested)
+                      ? Enum.fromJSON
+                      : nested.methods !== undefined
+                        ? Service.fromJSON
+                        : nested.id !== undefined
+                          ? Field.fromJSON
+                          : Namespace.fromJSON)(names[i], nested)
                 )
               }
             }
@@ -16572,12 +16574,12 @@
                   (nested.id !== undefined
                     ? Field.fromJSON
                     : nested.fields !== undefined
-                    ? Type.fromJSON
-                    : nested.values !== undefined
-                    ? Enum.fromJSON
-                    : nested.methods !== undefined
-                    ? Service.fromJSON
-                    : Namespace.fromJSON)(names[i], nested)
+                      ? Type.fromJSON
+                      : nested.values !== undefined
+                        ? Enum.fromJSON
+                        : nested.methods !== undefined
+                          ? Service.fromJSON
+                          : Namespace.fromJSON)(names[i], nested)
                 )
               }
             if (json.extensions && json.extensions.length)
@@ -17565,18 +17567,18 @@
                     ? 1
                     : 2
                   : part0 < 2097152
-                  ? 3
-                  : 4
+                    ? 3
+                    : 4
                 : part1 < 16384
-                ? part1 < 128
-                  ? 5
-                  : 6
-                : part1 < 2097152
-                ? 7
-                : 8
+                  ? part1 < 128
+                    ? 5
+                    : 6
+                  : part1 < 2097152
+                    ? 7
+                    : 8
               : part2 < 128
-              ? 9
-              : 10
+                ? 9
+                : 10
           }
         },
         {'../util/minimal': 48}
@@ -17759,10 +17761,10 @@
                     ? util._Buffer_allocUnsafe(sizeOrArray)
                     : new util.Array(sizeOrArray)
                   : util.Buffer
-                  ? util._Buffer_from(sizeOrArray)
-                  : typeof Uint8Array === 'undefined'
-                  ? sizeOrArray
-                  : new Uint8Array(sizeOrArray)
+                    ? util._Buffer_from(sizeOrArray)
+                    : typeof Uint8Array === 'undefined'
+                      ? sizeOrArray
+                      : new Uint8Array(sizeOrArray)
               }
 
               /**
@@ -18057,10 +18059,10 @@
             typeof global !== 'undefined'
               ? global
               : typeof self !== 'undefined'
-              ? self
-              : typeof window !== 'undefined'
-              ? window
-              : {}
+                ? self
+                : typeof window !== 'undefined'
+                  ? window
+                  : {}
           )
         },
         {
@@ -18090,8 +18092,8 @@
               (field.repeated && expected !== 'array'
                 ? '[]'
                 : field.map && expected !== 'object'
-                ? '{k:' + field.keyType + '}'
-                : '') +
+                  ? '{k:' + field.keyType + '}'
+                  : '') +
               ' expected'
             )
           }
@@ -18639,12 +18641,12 @@
                 (value = value >>> 0) < 128
                   ? 1
                   : value < 16384
-                  ? 2
-                  : value < 2097152
-                  ? 3
-                  : value < 268435456
-                  ? 4
-                  : 5,
+                    ? 2
+                    : value < 2097152
+                      ? 3
+                      : value < 268435456
+                        ? 4
+                        : 5,
                 value
               )).len
             return this
@@ -19048,10 +19050,10 @@ PERFORMANCE OF THIS SOFTWARE.
                   typeof global === 'object'
                     ? global
                     : typeof self === 'object'
-                    ? self
-                    : typeof this === 'object'
-                    ? this
-                    : {}
+                      ? self
+                      : typeof this === 'object'
+                        ? this
+                        : {}
                 if (typeof define === 'function' && define.amd) {
                   define('tslib', ['exports'], function (exports) {
                     factory(createExporter(root, createExporter(exports)))
@@ -19152,8 +19154,11 @@ PERFORMANCE OF THIS SOFTWARE.
                       c < 3
                         ? target
                         : desc === null
-                        ? (desc = Object.getOwnPropertyDescriptor(target, key))
-                        : desc,
+                          ? (desc = Object.getOwnPropertyDescriptor(
+                              target,
+                              key
+                            ))
+                          : desc,
                     d
                   if (
                     typeof Reflect === 'object' &&
@@ -19167,8 +19172,8 @@ PERFORMANCE OF THIS SOFTWARE.
                           (c < 3
                             ? d(r)
                             : c > 3
-                            ? d(target, key, r)
-                            : d(target, key)) || r
+                              ? d(target, key, r)
+                              : d(target, key)) || r
                   return c > 3 && r && Object.defineProperty(target, key, r), r
                 }
 
@@ -19196,8 +19201,8 @@ PERFORMANCE OF THIS SOFTWARE.
                       kind === 'getter'
                         ? 'get'
                         : kind === 'setter'
-                        ? 'set'
-                        : 'value'
+                          ? 'set'
+                          : 'value'
                   var target =
                     !descriptorIn && ctor
                       ? contextIn['static']
@@ -19356,9 +19361,9 @@ PERFORMANCE OF THIS SOFTWARE.
                               op[0] & 2
                                 ? y['return']
                                 : op[0]
-                                ? y['throw'] ||
-                                  ((t = y['return']) && t.call(y), 0)
-                                : y.next) &&
+                                  ? y['throw'] ||
+                                    ((t = y['return']) && t.call(y), 0)
+                                  : y.next) &&
                             !(t = t.call(y, op[1])).done)
                         )
                           return t
@@ -19601,8 +19606,8 @@ PERFORMANCE OF THIS SOFTWARE.
                           return (p = !p)
                             ? {value: __await(o[n](v)), done: false}
                             : f
-                            ? f(v)
-                            : v
+                              ? f(v)
+                              : v
                         }
                       : f
                   }
@@ -19698,10 +19703,10 @@ PERFORMANCE OF THIS SOFTWARE.
                   return kind === 'm'
                     ? f
                     : kind === 'a'
-                    ? f.call(receiver)
-                    : f
-                    ? f.value
-                    : state.get(receiver)
+                      ? f.call(receiver)
+                      : f
+                        ? f.value
+                        : state.get(receiver)
                 }
 
                 __classPrivateFieldSet = function (
@@ -19729,8 +19734,8 @@ PERFORMANCE OF THIS SOFTWARE.
                     kind === 'a'
                       ? f.call(receiver, value)
                       : f
-                      ? (f.value = value)
-                      : state.set(receiver, value),
+                        ? (f.value = value)
+                        : state.set(receiver, value),
                     value
                   )
                 }
@@ -19785,10 +19790,10 @@ PERFORMANCE OF THIS SOFTWARE.
             typeof global !== 'undefined'
               ? global
               : typeof self !== 'undefined'
-              ? self
-              : typeof window !== 'undefined'
-              ? window
-              : {}
+                ? self
+                : typeof window !== 'undefined'
+                  ? window
+                  : {}
           )
         },
         {}
@@ -19867,10 +19872,10 @@ PERFORMANCE OF THIS SOFTWARE.
             typeof global !== 'undefined'
               ? global
               : typeof self !== 'undefined'
-              ? self
-              : typeof window !== 'undefined'
-              ? window
-              : {}
+                ? self
+                : typeof window !== 'undefined'
+                  ? window
+                  : {}
           )
         },
         {'@trezor/connect/lib/exports': 80}
@@ -24349,8 +24354,12 @@ PERFORMANCE OF THIS SOFTWARE.
               const callInside = path =>
                 __awaiter(this, void 0, void 0, function* () {
                   const messages = this.messages()
-                  yield (0,
-                  send_1.buildAndSend)(messages, this._sendLowlevel(path, debugLink), name, data)
+                  yield (0, send_1.buildAndSend)(
+                    messages,
+                    this._sendLowlevel(path, debugLink),
+                    name,
+                    data
+                  )
                   const message = yield (0, receive_1.receiveAndParse)(
                     messages,
                     this._receiveLowlevel(path, debugLink)
@@ -24363,8 +24372,12 @@ PERFORMANCE OF THIS SOFTWARE.
               const callInside = path =>
                 __awaiter(this, void 0, void 0, function* () {
                   const messages = this.messages()
-                  yield (0,
-                  send_1.buildAndSend)(messages, this._sendLowlevel(path, debugLink), name, data)
+                  yield (0, send_1.buildAndSend)(
+                    messages,
+                    this._sendLowlevel(path, debugLink),
+                    name,
+                    data
+                  )
                 })
               return this.doWithSession(session, debugLink, callInside)
             }
@@ -24920,9 +24933,8 @@ PERFORMANCE OF THIS SOFTWARE.
               ] = 14)
             ] = '_Deprecated_ButtonRequest_PassphraseType'
             Enum_ButtonRequestType[
-              (Enum_ButtonRequestType[
-                'ButtonRequest_UnknownDerivationPath'
-              ] = 15)
+              (Enum_ButtonRequestType['ButtonRequest_UnknownDerivationPath'] =
+                15)
             ] = 'ButtonRequest_UnknownDerivationPath'
             Enum_ButtonRequestType[
               (Enum_ButtonRequestType['ButtonRequest_RecoveryHomepage'] = 16)
@@ -24956,9 +24968,8 @@ PERFORMANCE OF THIS SOFTWARE.
               (Enum_PinMatrixRequestType['PinMatrixRequestType_NewSecond'] = 3)
             ] = 'PinMatrixRequestType_NewSecond'
             Enum_PinMatrixRequestType[
-              (Enum_PinMatrixRequestType[
-                'PinMatrixRequestType_WipeCodeFirst'
-              ] = 4)
+              (Enum_PinMatrixRequestType['PinMatrixRequestType_WipeCodeFirst'] =
+                4)
             ] = 'PinMatrixRequestType_WipeCodeFirst'
             Enum_PinMatrixRequestType[
               (Enum_PinMatrixRequestType[
@@ -26226,10 +26237,10 @@ PERFORMANCE OF THIS SOFTWARE.
               const attemptCount = isArray(attempts)
                 ? attempts.length
                 : attempts !== null && attempts !== void 0
-                ? attempts
-                : deadline
-                ? Infinity
-                : 1
+                  ? attempts
+                  : deadline
+                    ? Infinity
+                    : 1
               const clearAborter = new AbortController()
               const clear = clearAborter.signal
               const getParams = isArray(attempts)
