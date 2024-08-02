@@ -1,9 +1,8 @@
 from fastapi import APIRouter
 
-from lnbits.db import Database
-from lnbits.helpers import template_renderer
-
-db = Database("ext_watchonly")
+from .crud import db
+from .views import watchonly_generic_router
+from .views_api import watchonly_api_router
 
 watchonly_static_files = [
     {
@@ -13,11 +12,7 @@ watchonly_static_files = [
 ]
 
 watchonly_ext: APIRouter = APIRouter(prefix="/watchonly", tags=["watchonly"])
+watchonly_ext.include_router(watchonly_generic_router)
+watchonly_ext.include_router(watchonly_api_router)
 
-
-def watchonly_renderer():
-    return template_renderer(["watchonly/templates"])
-
-
-from .views import *  # noqa: F401,F403
-from .views_api import *  # noqa: F401,F403
+__all__ = ["watchonly_ext", "watchonly_static_files", "db"]

@@ -30,7 +30,8 @@ def parse_key(masterpub: str) -> Tuple[Descriptor, Optional[dict]]:
         # check depth
         if k.key.depth != 3:
             raise ValueError(
-                "Non-standard depth. Only bip44, bip49 and bip84 are supported with bare xpubs. For custom derivation paths use descriptors."
+                "Non-standard depth. Only bip44, bip49 and bip84 are supported "
+                "with bare xpubs. For custom derivation paths use descriptors."
             )
         # if allowed derivation is not provided use default /{0,1}/*
         if k.allowed_derivation is None:
@@ -43,11 +44,11 @@ def parse_key(masterpub: str) -> Tuple[Descriptor, Optional[dict]]:
             if version in [net["xpub"], net["ypub"], net["zpub"]]:
                 network = net
                 if version == net["xpub"]:
-                    desc = Descriptor.from_string("pkh(%s)" % str(k))
+                    desc = Descriptor.from_string(f"pkh({k!s})")
                 elif version == net["ypub"]:
-                    desc = Descriptor.from_string("sh(wpkh(%s))" % str(k))
+                    desc = Descriptor.from_string(f"sh(wpkh({k!s}))")
                 elif version == net["zpub"]:
-                    desc = Descriptor.from_string("wpkh(%s)" % str(k))
+                    desc = Descriptor.from_string(f"wpkh({k!s}")
                 break
         # we didn't find correct version
         if not network:

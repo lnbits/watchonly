@@ -82,14 +82,14 @@ const mapWalletAccount = function (o) {
   })
 }
 
-const mapDerivationPathToTrezor = function(path = '') {
-    return path
-      .split('/')
-      .filter(p => p !== 'm')
-      .map(p =>  p.endsWith("'") ? (+p.slice(0, -1) | 0x80000000) : +p)
+const mapDerivationPathToTrezor = function (path = '') {
+  return path
+    .split('/')
+    .filter(p => p !== 'm')
+    .map(p => (p.endsWith("'") ? +p.slice(0, -1) | 0x80000000 : +p))
 }
 
-const mapOutputAccountTypeToTrezor = function(accountType) {
+const mapOutputAccountTypeToTrezor = function (accountType) {
   switch (accountType) {
     case 'p2pkh':
       return 'PAYTOADDRESS'
@@ -100,11 +100,11 @@ const mapOutputAccountTypeToTrezor = function(accountType) {
     case 'p2tr':
       return 'PAYTOTAPROOT'
     default:
-      return undefined;
+      return undefined
   }
 }
 
-const mapInputAccountTypeToTrezor = function(accountType) {
+const mapInputAccountTypeToTrezor = function (accountType) {
   switch (accountType) {
     case 'p2pkh':
       return 'SPENDADDRESS'
@@ -115,6 +115,6 @@ const mapInputAccountTypeToTrezor = function(accountType) {
     case 'p2tr':
       return 'SPENDTAPROOT'
     default:
-      return undefined;
+      return undefined
   }
 }

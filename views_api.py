@@ -8,11 +8,10 @@ from embit.ec import PublicKey
 from embit.networks import NETWORKS
 from embit.psbt import PSBT, DerivationPath
 from embit.transaction import Transaction, TransactionInput, TransactionOutput
-from fastapi import Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from lnbits.core.models import WalletTypeInfo
+from lnbits.decorators import get_key_type, require_admin_key
 
-from lnbits.decorators import WalletTypeInfo, get_key_type, require_admin_key
-
-from . import watchonly_ext
 from .crud import (
     create_config,
     create_fresh_addresses,
@@ -40,10 +39,10 @@ from .models import (
     WalletAccount,
 )
 
-###################WALLETS#############################
+watchonly_api_router = APIRouter()
 
 
-@watchonly_ext.get("/api/v1/wallet")
+@watchonly_api_router.get("/api/v1/wallet")
 async def api_wallets_retrieve(
     network: str = Query("Mainnet"), wallet: WalletTypeInfo = Depends(get_key_type)
 ):
@@ -53,11 +52,13 @@ async def api_wallets_retrieve(
             wallet.dict()
             for wallet in await get_watch_wallets(wallet.wallet.user, network)
         ]
-    except:
+    except Exception:
         return []
 
 
-@watchonly_ext.get("/api/v1/wallet/{wallet_id}", dependencies=[Depends(get_key_type)])
+@watchonly_api_router.get(
+    "/api/v1/wallet/{wallet_id}", dependencies=[Depends(get_key_type)]
+)
 async def api_wallet_retrieve(wallet_id: str):
     w_wallet = await get_watch_wallet(wallet_id)
 
@@ -69,7 +70,7 @@ async def api_wallet_retrieve(wallet_id: str):
     return w_wallet.dict()
 
 
-@watchonly_ext.post("/api/v1/wallet")
+@watchonly_api_router.post("/api/v1/wallet")
 async def api_wallet_create_or_update(
     data: CreateWallet, w: WalletTypeInfo = Depends(require_admin_key)
 ):
@@ -89,7 +90,7 @@ async def api_wallet_create_or_update(
             fingerprint=descriptor.keys[0].fingerprint.hex(),
             type=descriptor.scriptpubkey_type(),
             title=data.title,
-            address_no=-1,  # so fresh address on empty wallet can get address with index 0
+            address_no=-1,  # fresh address on empty wallet can get address with index 0
             balance=0,
             network=network["name"],
             meta=data.meta,
@@ -108,16 +109,16 @@ async def api_wallet_create_or_update(
         )
         if existing_wallet:
             raise ValueError(
-                "Account '{}' has the same master pulic key".format(
-                    existing_wallet.title
-                )
+                f"Account '{existing_wallet.title}' has the same master pulic key"
             )
 
         wallet = await create_watch_wallet(w.wallet.user, new_wallet)
 
         await api_get_addresses(wallet.id, w)
-    except Exception as e:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)
+        ) from exc
 
     config = await get_config(w.wallet.user)
     if not config:
@@ -125,7 +126,7 @@ async def api_wallet_create_or_update(
     return wallet.dict()
 
 
-@watchonly_ext.delete(
+@watchonly_api_router.delete(
     "/api/v1/wallet/{wallet_id}", dependencies=[Depends(require_admin_key)]
 )
 async def api_wallet_delete(wallet_id: str):
@@ -145,15 +146,19 @@ async def api_wallet_delete(wallet_id: str):
 #############################ADDRESSES##########################
 
 
-@watchonly_ext.get("/api/v1/address/{wallet_id}", dependencies=[Depends(get_key_type)])
+@watchonly_api_router.get(
+    "/api/v1/address/{wallet_id}", dependencies=[Depends(get_key_type)]
+)
 async def api_fresh_address(wallet_id: str):
     address = await get_fresh_address(wallet_id)
     assert address
     return address.dict()
 
 
-@watchonly_ext.put("/api/v1/address/{id}", dependencies=[Depends(require_admin_key)])
-async def api_update_address(id: str, req: Request):
+@watchonly_api_router.put(
+    "/api/v1/address/{address_id}", dependencies=[Depends(require_admin_key)]
+)
+async def api_update_address(address_id: str, req: Request):
     body = await req.json()
     params = {}
     # amout is only updated if the address has history
@@ -164,8 +169,7 @@ async def api_update_address(id: str, req: Request):
     if "note" in body:
         params["note"] = body["note"]
 
-    address = await update_address(**params, id=id)
-    assert address
+    address = await update_address(**params, address_id=address_id)
 
     wallet = (
         await get_watch_wallet(address.wallet)
@@ -180,7 +184,7 @@ async def api_update_address(id: str, req: Request):
     return address
 
 
-@watchonly_ext.get("/api/v1/addresses/{wallet_id}")
+@watchonly_api_router.get("/api/v1/addresses/{wallet_id}")
 async def api_get_addresses(wallet_id, w: WalletTypeInfo = Depends(get_key_type)):
     wallet = await get_watch_wallet(wallet_id)
     if not wallet:
@@ -231,7 +235,7 @@ async def api_get_addresses(wallet_id, w: WalletTypeInfo = Depends(get_key_type)
 #############################PSBT##########################
 
 
-@watchonly_ext.post("/api/v1/psbt", dependencies=[Depends(require_admin_key)])
+@watchonly_api_router.post("/api/v1/psbt", dependencies=[Depends(require_admin_key)])
 async def api_psbt_create(data: CreatePsbt):
     try:
         vin = [
@@ -248,7 +252,7 @@ async def api_psbt_create(data: CreatePsbt):
 
         inputs_extra: List[dict] = []
 
-        for i, inp in enumerate(data.inputs):
+        for inp in data.inputs:
             bip32_derivations = {}
             descriptor = descriptors[inp.wallet][0]
             d = descriptor.derive(inp.address_index, inp.branch_index)
@@ -272,7 +276,7 @@ async def api_psbt_create(data: CreatePsbt):
 
         outputs_extra = []
         bip32_derivations = {}
-        for i, out in enumerate(data.outputs):
+        for out in data.outputs:
             if out.branch_index == 1:
                 assert out.wallet
                 descriptor = descriptors[out.wallet][0]
@@ -288,14 +292,16 @@ async def api_psbt_create(data: CreatePsbt):
 
         return psbt.to_string()
 
-    except Exception as e:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)
+        ) from exc
 
 
-@watchonly_ext.put("/api/v1/psbt/utxos")
-async def api_psbt_utxos_tx(
-    req: Request, w: WalletTypeInfo = Depends(require_admin_key)
-):
+@watchonly_api_router.put(
+    "/api/v1/psbt/utxos", dependencies=[Depends(require_admin_key)]
+)
+async def api_psbt_utxos_tx(req: Request):
     """Extract previous unspent transaction outputs (tx_id, vout) from PSBT"""
 
     body = await req.json()
@@ -306,15 +312,19 @@ async def api_psbt_utxos_tx(
             res.append({"tx_id": inp.txid.hex(), "vout": inp.vout})
 
         return res
-    except Exception as e:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)
+        ) from exc
 
 
-@watchonly_ext.put("/api/v1/psbt/extract", dependencies=[Depends(require_admin_key)])
+@watchonly_api_router.put(
+    "/api/v1/psbt/extract", dependencies=[Depends(require_admin_key)]
+)
 async def api_psbt_extract_tx(data: ExtractPsbt):
     network = NETWORKS["main"] if data.network == "Mainnet" else NETWORKS["test"]
     try:
-        psbt = PSBT.from_base64(data.psbtBase64)
+        psbt = PSBT.from_base64(data.psbt_base64)
         for i, inp in enumerate(data.inputs):
             psbt.inputs[i].non_witness_utxo = Transaction.from_string(inp.tx_hex)
 
@@ -337,11 +347,15 @@ async def api_psbt_extract_tx(data: ExtractPsbt):
             )
         signed_tx = SignedTransaction(tx_hex=tx_hex, tx_json=json.dumps(tx))
         return signed_tx.dict()
-    except Exception as e:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)
+        ) from exc
 
 
-@watchonly_ext.put("/api/v1/tx/extract", dependencies=[Depends(require_admin_key)])
+@watchonly_api_router.put(
+    "/api/v1/tx/extract", dependencies=[Depends(require_admin_key)]
+)
 async def api_extract_tx(data: ExtractTx):
     network = NETWORKS["main"] if data.network == "Mainnet" else NETWORKS["test"]
     try:
@@ -357,11 +371,13 @@ async def api_extract_tx(data: ExtractTx):
                 {"amount": out.value, "address": out.script_pubkey.address(network)}
             )
         return {"tx_json": tx}
-    except Exception as e:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)
+        ) from exc
 
 
-@watchonly_ext.post("/api/v1/tx")
+@watchonly_api_router.post("/api/v1/tx")
 async def api_tx_broadcast(
     data: SerializedTransaction, w: WalletTypeInfo = Depends(require_admin_key)
 ):
@@ -382,14 +398,13 @@ async def api_tx_broadcast(
             r.raise_for_status()
             tx_id = r.text
             return tx_id
-    except Exception as e:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)
+        ) from exc
 
 
-#############################CONFIG##########################
-
-
-@watchonly_ext.put("/api/v1/config")
+@watchonly_api_router.put("/api/v1/config")
 async def api_update_config(
     data: Config, w: WalletTypeInfo = Depends(require_admin_key)
 ):
@@ -398,7 +413,7 @@ async def api_update_config(
     return config.dict()
 
 
-@watchonly_ext.get("/api/v1/config")
+@watchonly_api_router.get("/api/v1/config")
 async def api_get_config(w: WalletTypeInfo = Depends(get_key_type)):
     config = await get_config(w.wallet.user)
     if not config:
