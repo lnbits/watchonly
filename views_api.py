@@ -10,7 +10,8 @@ from embit.psbt import PSBT, DerivationPath
 from embit.transaction import Transaction, TransactionInput, TransactionOutput
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from lnbits.core.models import WalletTypeInfo
-from lnbits.decorators import get_key_type, require_admin_key
+from lnbits.decorators import require_admin_key, require_invoice_key
+from lnbits.helpers import urlsafe_short_hash
 
 from .crud import (
     create_config,
@@ -18,6 +19,7 @@ from .crud import (
     create_watch_wallet,
     delete_addresses_for_wallet,
     delete_watch_wallet,
+    get_address_by_id,
     get_addresses,
     get_config,
     get_fresh_address,
@@ -29,6 +31,7 @@ from .crud import (
 )
 from .helpers import parse_key
 from .models import (
+    Address,
     Config,
     CreatePsbt,
     CreateWallet,
@@ -44,36 +47,30 @@ watchonly_api_router = APIRouter()
 
 @watchonly_api_router.get("/api/v1/wallet")
 async def api_wallets_retrieve(
-    network: str = Query("Mainnet"), wallet: WalletTypeInfo = Depends(get_key_type)
-):
-
-    try:
-        return [
-            wallet.dict()
-            for wallet in await get_watch_wallets(wallet.wallet.user, network)
-        ]
-    except Exception:
-        return []
+    network: str = Query("Mainnet"),
+    key_info: WalletTypeInfo = Depends(require_invoice_key),
+) -> list[WalletAccount]:
+    return await get_watch_wallets(key_info.wallet.user, network)
 
 
 @watchonly_api_router.get(
-    "/api/v1/wallet/{wallet_id}", dependencies=[Depends(get_key_type)]
+    "/api/v1/wallet/{wallet_id}", dependencies=[Depends(require_invoice_key)]
 )
-async def api_wallet_retrieve(wallet_id: str):
-    w_wallet = await get_watch_wallet(wallet_id)
+async def api_wallet_retrieve(wallet_id: str) -> WalletAccount:
+    watch_wallet = await get_watch_wallet(wallet_id)
 
-    if not w_wallet:
+    if not watch_wallet:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND, detail="Wallet does not exist."
         )
 
-    return w_wallet.dict()
+    return watch_wallet
 
 
 @watchonly_api_router.post("/api/v1/wallet")
 async def api_wallet_create_or_update(
     data: CreateWallet, w: WalletTypeInfo = Depends(require_admin_key)
-):
+) -> WalletAccount:
     try:
         descriptor, network = parse_key(data.masterpub)
         assert network
@@ -85,7 +82,8 @@ async def api_wallet_create_or_update(
             )
 
         new_wallet = WalletAccount(
-            id="none",
+            id=urlsafe_short_hash(),
+            user=w.wallet.user,
             masterpub=data.masterpub,
             fingerprint=descriptor.keys[0].fingerprint.hex(),
             type=descriptor.scriptpubkey_type(),
@@ -112,7 +110,7 @@ async def api_wallet_create_or_update(
                 f"Account '{existing_wallet.title}' has the same master pulic key"
             )
 
-        wallet = await create_watch_wallet(w.wallet.user, new_wallet)
+        wallet = await create_watch_wallet(new_wallet)
 
         await api_get_addresses(wallet.id, w)
     except Exception as exc:
@@ -123,7 +121,7 @@ async def api_wallet_create_or_update(
     config = await get_config(w.wallet.user)
     if not config:
         await create_config(user=w.wallet.user)
-    return wallet.dict()
+    return wallet
 
 
 @watchonly_api_router.delete(
@@ -147,29 +145,34 @@ async def api_wallet_delete(wallet_id: str):
 
 
 @watchonly_api_router.get(
-    "/api/v1/address/{wallet_id}", dependencies=[Depends(get_key_type)]
+    "/api/v1/address/{wallet_id}", dependencies=[Depends(require_invoice_key)]
 )
-async def api_fresh_address(wallet_id: str):
+async def api_fresh_address(wallet_id: str) -> Address:
     address = await get_fresh_address(wallet_id)
     assert address
-    return address.dict()
+    return address
 
 
 @watchonly_api_router.put(
     "/api/v1/address/{address_id}", dependencies=[Depends(require_admin_key)]
 )
 async def api_update_address(address_id: str, req: Request):
+    address = await get_address_by_id(address_id)
+    if not address:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Address does not exist."
+        )
+
     body = await req.json()
-    params = {}
     # amout is only updated if the address has history
     if "amount" in body:
-        params["amount"] = int(body["amount"])
-        params["has_activity"] = True
+        address.amount = int(body["amount"])
+        address.has_activity = True
 
     if "note" in body:
-        params["note"] = body["note"]
+        address.note = body["note"]
 
-    address = await update_address(**params, address_id=address_id)
+    address = await update_address(address)
 
     wallet = (
         await get_watch_wallet(address.wallet)
@@ -178,14 +181,15 @@ async def api_update_address(address_id: str, req: Request):
     )
 
     if wallet and wallet.address_no < address.address_index:
-        await update_watch_wallet(
-            address.wallet, **{"address_no": address.address_index}
-        )
+        wallet.address_no = address.address_index
+        await update_watch_wallet(wallet)
     return address
 
 
 @watchonly_api_router.get("/api/v1/addresses/{wallet_id}")
-async def api_get_addresses(wallet_id, w: WalletTypeInfo = Depends(get_key_type)):
+async def api_get_addresses(
+    wallet_id, key_info: WalletTypeInfo = Depends(require_invoice_key)
+) -> list[Address]:
     wallet = await get_watch_wallet(wallet_id)
     if not wallet:
         raise HTTPException(
@@ -193,8 +197,8 @@ async def api_get_addresses(wallet_id, w: WalletTypeInfo = Depends(get_key_type)
         )
 
     addresses = await get_addresses(wallet_id)
-    config = await get_config(w.wallet.user)
-    assert config
+    config = await get_config(key_info.wallet.user)
+    assert config, "Config not found"
 
     if not addresses:
         await create_fresh_addresses(wallet_id, 0, config.receive_gap_limit)
@@ -228,8 +232,7 @@ async def api_get_addresses(wallet_id, w: WalletTypeInfo = Depends(get_key_type)
             True,
         )
 
-    addresses = await get_addresses(wallet_id)
-    return [address.dict() for address in addresses]
+    return await get_addresses(wallet_id)
 
 
 #############################PSBT##########################
@@ -321,7 +324,7 @@ async def api_psbt_utxos_tx(req: Request):
 @watchonly_api_router.put(
     "/api/v1/psbt/extract", dependencies=[Depends(require_admin_key)]
 )
-async def api_psbt_extract_tx(data: ExtractPsbt):
+async def api_psbt_extract_tx(data: ExtractPsbt) -> SignedTransaction:
     network = NETWORKS["main"] if data.network == "Mainnet" else NETWORKS["test"]
     try:
         psbt = PSBT.from_base64(data.psbt_base64)
@@ -346,7 +349,7 @@ async def api_psbt_extract_tx(data: ExtractPsbt):
                 {"amount": out.value, "address": out.script_pubkey.address(network)}
             )
         signed_tx = SignedTransaction(tx_hex=tx_hex, tx_json=json.dumps(tx))
-        return signed_tx.dict()
+        return signed_tx
     except Exception as exc:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)
@@ -407,15 +410,17 @@ async def api_tx_broadcast(
 @watchonly_api_router.put("/api/v1/config")
 async def api_update_config(
     data: Config, w: WalletTypeInfo = Depends(require_admin_key)
-):
+) -> Config:
     config = await update_config(data, user=w.wallet.user)
     assert config
-    return config.dict()
+    return config
 
 
 @watchonly_api_router.get("/api/v1/config")
-async def api_get_config(w: WalletTypeInfo = Depends(get_key_type)):
-    config = await get_config(w.wallet.user)
+async def api_get_config(
+    key_info: WalletTypeInfo = Depends(require_invoice_key),
+) -> Config:
+    config = await get_config(key_info.wallet.user)
     if not config:
-        config = await create_config(user=w.wallet.user)
-    return config.dict()
+        config = await create_config(user=key_info.wallet.user)
+    return config

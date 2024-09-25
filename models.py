@@ -1,4 +1,3 @@
-from sqlite3 import Row
 from typing import Optional
 
 from fastapi import Query
@@ -14,6 +13,7 @@ class CreateWallet(BaseModel):
 
 class WalletAccount(BaseModel):
     id: str
+    user: str
     masterpub: str
     fingerprint: str
     title: str
@@ -22,10 +22,6 @@ class WalletAccount(BaseModel):
     type: Optional[str] = ""
     network: str = "Mainnet"
     meta: str = "{}"
-
-    @classmethod
-    def from_row(cls, row: Row) -> "WalletAccount":
-        return cls(**dict(row))
 
 
 class Address(BaseModel):
@@ -37,10 +33,6 @@ class Address(BaseModel):
     address_index: int
     note: Optional[str] = None
     has_activity: bool = False
-
-    @classmethod
-    def from_row(cls, row: Row) -> "Address":
-        return cls(**dict(row))
 
 
 class TransactionInput(BaseModel):
