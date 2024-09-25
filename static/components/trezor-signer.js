@@ -2,6 +2,7 @@ window.app.component('trezor-signer', {
   name: 'trezor-signer',
   template: '#trezor-signer',
   props: ['sats-denominated', 'network'],
+  delimiters: ['${', '}'],
   data: function () {
     return {
       features: null,

@@ -1,6 +1,7 @@
 window.app.component('payment', {
   name: 'payment',
   template: '#payment',
+  delimiters: ['${', '}'],
 
   props: [
     'accounts',

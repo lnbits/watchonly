@@ -1,6 +1,7 @@
 window.app.component('wallet-config', {
   name: 'wallet-config',
   template: '#wallet-config',
+  delimiters: ['${', '}'],
 
   props: ['total', 'config-data', 'adminkey'],
   data: function () {

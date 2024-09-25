@@ -1,6 +1,7 @@
 window.app.component('wallet-list', {
   name: 'wallet-list',
   template: '#wallet-list',
+  delimiters: ['${', '}'],
 
   props: [
     'adminkey',

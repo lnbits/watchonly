@@ -1,6 +1,7 @@
 window.app.component('seed-input', {
   name: 'seed-input',
   template: '#seed-input',
+  delimiters: ['${', '}'],
 
   computed: {
     actualPosition: function () {

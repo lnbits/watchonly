@@ -1,6 +1,7 @@
 window.app.component('fee-rate', {
   name: 'fee-rate',
   template: '#fee-rate',
+  delimiters: ['${', '}'],
 
   props: ['rate', 'fee-value', 'sats-denominated', 'mempool-endpoint'],
 

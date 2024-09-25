@@ -1,6 +1,7 @@
 window.app.component('history', {
   name: 'history',
   template: '#history',
+  delimiters: ['${', '}'],
 
   props: ['history', 'mempool-endpoint', 'sats-denominated', 'filter'],
   data: function () {

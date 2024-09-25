@@ -1,6 +1,7 @@
 window.app.component('send-to', {
   name: 'send-to',
   template: '#send-to',
+  delimiters: ['${', '}'],
 
   props: ['data', 'tx-size', 'selected-amount', 'fee-rate', 'sats-denominated'],
 
