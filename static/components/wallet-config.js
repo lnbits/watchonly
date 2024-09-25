@@ -4,6 +4,7 @@ window.app.component('wallet-config', {
   delimiters: ['${', '}'],
 
   props: ['total', 'config-data', 'adminkey'],
+  emits: ['update:config-data'],
   data: function () {
     return {
       networkOptions: ['Mainnet', 'Testnet'],

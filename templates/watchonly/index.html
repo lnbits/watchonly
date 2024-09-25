@@ -4,7 +4,7 @@
   <div class="col-12 col-md-7 q-gutter-y-md">
     <wallet-config
       :total="utxos.total"
-      :config-data.sync="config"
+      v-model:config-data="config"
       :adminkey="g.user.wallets[0].adminkey"
     >
       <template v-slot:trezor>
