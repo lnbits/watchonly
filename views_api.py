@@ -1,6 +1,5 @@
 import json
 from http import HTTPStatus
-from typing import List
 
 import httpx
 from embit import finalizer, script
@@ -69,7 +68,7 @@ async def api_wallet_retrieve(wallet_id: str) -> WalletAccount:
 
 @watchonly_api_router.post("/api/v1/wallet")
 async def api_wallet_create_or_update(
-    data: CreateWallet, w: WalletTypeInfo = Depends(require_admin_key)
+    data: CreateWallet, key_info: WalletTypeInfo = Depends(require_admin_key)
 ) -> WalletAccount:
     try:
         descriptor, network = parse_key(data.masterpub)
@@ -83,7 +82,7 @@ async def api_wallet_create_or_update(
 
         new_wallet = WalletAccount(
             id=urlsafe_short_hash(),
-            user=w.wallet.user,
+            user=key_info.wallet.user,
             masterpub=data.masterpub,
             fingerprint=descriptor.keys[0].fingerprint.hex(),
             type=descriptor.scriptpubkey_type(),
@@ -94,7 +93,7 @@ async def api_wallet_create_or_update(
             meta=data.meta,
         )
 
-        wallets = await get_watch_wallets(w.wallet.user, network["name"])
+        wallets = await get_watch_wallets(key_info.wallet.user, network["name"])
         existing_wallet = next(
             (
                 ew
@@ -112,15 +111,15 @@ async def api_wallet_create_or_update(
 
         wallet = await create_watch_wallet(new_wallet)
 
-        await api_get_addresses(wallet.id, w)
+        await api_get_addresses(wallet.id, key_info)
     except Exception as exc:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)
         ) from exc
 
-    config = await get_config(w.wallet.user)
+    config = await get_config(key_info.wallet.user)
     if not config:
-        await create_config(user=w.wallet.user)
+        await create_config(user=key_info.wallet.user)
     return wallet
 
 
@@ -235,9 +234,6 @@ async def api_get_addresses(
     return await get_addresses(wallet_id)
 
 
-#############################PSBT##########################
-
-
 @watchonly_api_router.post("/api/v1/psbt", dependencies=[Depends(require_admin_key)])
 async def api_psbt_create(data: CreatePsbt):
     try:
@@ -253,7 +249,7 @@ async def api_psbt_create(data: CreatePsbt):
         for _, masterpub in enumerate(data.masterpubs):
             descriptors[masterpub.id] = parse_key(masterpub.public_key)
 
-        inputs_extra: List[dict] = []
+        inputs_extra: list[dict] = []
 
         for inp in data.inputs:
             bip32_derivations = {}
@@ -382,10 +378,10 @@ async def api_extract_tx(data: ExtractTx):
 
 @watchonly_api_router.post("/api/v1/tx")
 async def api_tx_broadcast(
-    data: SerializedTransaction, w: WalletTypeInfo = Depends(require_admin_key)
+    data: SerializedTransaction, key_info: WalletTypeInfo = Depends(require_admin_key)
 ):
     try:
-        config = await get_config(w.wallet.user)
+        config = await get_config(key_info.wallet.user)
         if not config:
             raise ValueError(
                 "Cannot broadcast transaction. Mempool endpoint not defined!"
@@ -409,9 +405,9 @@ async def api_tx_broadcast(
 
 @watchonly_api_router.put("/api/v1/config")
 async def api_update_config(
-    data: Config, w: WalletTypeInfo = Depends(require_admin_key)
+    data: Config, key_info: WalletTypeInfo = Depends(require_admin_key)
 ) -> Config:
-    config = await update_config(data, user=w.wallet.user)
+    config = await update_config(data, user=key_info.wallet.user)
     assert config
     return config
 

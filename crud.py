@@ -213,7 +213,7 @@ async def create_config(user: str) -> Config:
         """SELECT json_data FROM watchonly.config WHERE "user" = :user""",
         {"user": user},
     )
-    return json.loads(row[0], object_hook=lambda d: Config(**d))
+    return json.loads(row["json_data"], object_hook=lambda d: Config(**d))
 
 
 async def update_config(config: Config, user: str) -> Config:
@@ -225,7 +225,7 @@ async def update_config(config: Config, user: str) -> Config:
         """SELECT json_data FROM watchonly.config WHERE "user" = :user""",
         {"user": user},
     )
-    return json.loads(row[0], object_hook=lambda d: Config(**d))
+    return json.loads(row["json_data"], object_hook=lambda d: Config(**d))
 
 
 async def get_config(user: str) -> Optional[Config]:
@@ -233,4 +233,6 @@ async def get_config(user: str) -> Optional[Config]:
         """SELECT json_data FROM watchonly.config WHERE "user" = :user""",
         {"user": user},
     )
-    return json.loads(row[0], object_hook=lambda d: Config(**d)) if row else None
+    return (
+        json.loads(row["json_data"], object_hook=lambda d: Config(**d)) if row else None
+    )
