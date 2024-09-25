@@ -292,7 +292,50 @@
   {% endraw %}
 </div>
 
-{% endblock %} {% block vue_templates %} {% endblock %} {% block scripts %} {{
+{% endblock %} {% block vue_templates %}
+<template id="my-checkbox"
+  >{% include("watchonly/components/my-checkbox.html") %}</template
+>
+<template id="wallet-config"
+  >{% include("watchonly/components/wallet-config.html") %}</template
+>
+<template id="wallet-list"
+  >{% include("watchonly/components/wallet-list.html") %}</template
+>
+<template id="address-list"
+  >{% include("watchonly/components/address-list.html") %}</template
+>
+<template id="history"
+  >{% include("watchonly/components/history.html") %}</template
+>
+<template id="utxo-list"
+  >{% include("watchonly/components/utxo-list.html") %}</template
+>
+<template id="fee-rate"
+  >{% include("watchonly/components/fee-rate.html") %}</template
+>
+<template id="fee-rate-selector"
+  >{% include("watchonly/components/fee-rate-selector.html") %}</template
+>
+<template id="seed-input"
+  >{% include("watchonly/components/seed-input.html") %}</template
+>
+<template id="send-to"
+  >{% include("watchonly/components/send-to.html") %}</template
+>
+<template id="payment"
+  >{% include("watchonly/components/payment.html") %}</template
+>
+<template id="serial-signer"
+  >{% include("watchonly/components/serial-signer.html") %}</template
+>
+<template id="trezor-signer"
+  >{% include("watchonly/components/trezor-signer.html") %}</template
+>
+<template id="serial-port-config"
+  >{% include("watchonly/components/serial-port-config.html") %}</template
+>
+{% endblock %} {% block scripts %} {{
 window_vars(user) }}
 <style>
   .btn-full {
@@ -302,71 +345,29 @@ window_vars(user) }}
 <script src="https://connect.trezor.io/9/trezor-connect.js"></script>
 <script type="text/javascript" src="https://mempool.space/mempool.js"></script>
 
-<script src="{{ static_url_for('watchonly/static', js/tables.js') }}"></script>
-<script src="{{ static_url_for('watchonly/static', js/map.js') }}"></script>
-<script src="{{ static_url_for('watchonly/static', js/utils.js') }}"></script>
-<script src="{{ static_url_for('watchonly/static', js/bip39-word-list.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'js/tables.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'js/map.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'js/utils.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'js/bip39-word-list.js') }}"></script>
 
-<template id="my-checkbox"
-  >{% include("watchonly/components/my-checkbox.html") %}</template
->
-<script src="{{ static_url_for('watchonly/static', components/my-checkbox.js') }}"></script>
-<template id="wallet-config"
-  >{% include("watchonly/components/wallet-config.html") %}</template
->
-<script src="{{ static_url_for('watchonly/static', components/wallet-config.js') }}"></script>
-<template id="wallet-list"
-  >{% include("watchonly/components/wallet-list.html") %}</template
->
-<script src="{{ static_url_for('watchonly/static', components/wallet-list.js') }}"></script>
-<template id="address-list"
-  >{% include("watchonly/components/address-list.html") %}</template
->
-<script src="{{ static_url_for('watchonly/static', components/address-list.js') }}"></script>
-<template id="history"
-  >{% include("watchonly/components/history.html") %}</template
->
-<script src="{{ static_url_for('watchonly/static', components/history.js') }}"></script>
-<template id="utxo-list"
-  >{% include("watchonly/components/utxo-list.html") %}</template
->
-<script src="{{ static_url_for('watchonly/static', components/utxo-list.js') }}"></script>
-<template id="fee-rate"
-  >{% include("watchonly/components/fee-rate.html") %}</template
->
-<script src="{{ static_url_for('watchonly/static', components/fee-rate.js') }}"></script>
-<template id="fee-rate-selector"
-  >{% include("watchonly/components/fee-rate-selector.html") %}</template
->
-<script src="{{ static_url_for('watchonly/static', components/fee-rate-selector.js') }}"></script>
-<template id="seed-input"
-  >{% include("watchonly/components/seed-input.html") %}</template
->
-<script src="{{ static_url_for('watchonly/static', components/seed-input.js') }}"></script>
-<template id="send-to"
-  >{% include("watchonly/components/send-to.html") %}</template
->
-<script src="{{ static_url_for('watchonly/static', components/send-to.js') }}"></script>
-<template id="payment"
-  >{% include("watchonly/components/payment.html") %}</template
->
-<script src="{{ static_url_for('watchonly/static', components/payment.js') }}"></script>
-<template id="serial-signer"
-  >{% include("watchonly/components/serial-signer.html") %}</template
->
-<script src="{{ static_url_for('watchonly/static', components/serial-signer.js') }}"></script>
-<template id="trezor-signer"
-  >{% include("watchonly/components/trezor-signer.html") %}</template
->
-<script src="{{ static_url_for('watchonly/static', components/trezor-signer.js') }}"></script>
-<template id="serial-port-config"
-  >{% include("watchonly/components/serial-port-config.html") %}</template
->
-<script src="{{ static_url_for('watchonly/static', components/serial-port-config.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'components/my-checkbox.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'components/wallet-config.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'components/wallet-list.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'components/address-list.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'components/history.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'components/utxo-list.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'components/fee-rate.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'components/fee-rate-selector.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'components/seed-input.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'components/send-to.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'components/payment.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'components/serial-signer.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'components/trezor-signer.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'components/serial-port-config.js') }}"></script>
 
-<script src="{{ static_url_for('watchonly/static', js/crypto/noble-secp256k1.js') }}"></script>
-<script src="{{ static_url_for('watchonly/static', js/crypto/aes.js') }}"></script>
-<script src="{{ static_url_for('watchonly/static', js/lib/trezor-web-connect.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'js/crypto/noble-secp256k1.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'js/crypto/aes.js') }}"></script>
+<script src="{{ static_url_for('watchonly/static', 'js/lib/trezor-web-connect.js') }}"></script>
 <script>
   window.TrezorConnect = window.trezor.default
 </script>
