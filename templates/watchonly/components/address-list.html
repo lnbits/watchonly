@@ -45,7 +45,7 @@
     row-key="id"
     virtual-scroll
     :columns="addressesTable.columns"
-    :pagination.sync="addressesTable.pagination"
+    v-model:pagination="addressesTable.pagination"
     :filter="addressesTable.filter"
   >
     <template v-slot:body="props">
@@ -67,9 +67,8 @@
               style="color: unset"
               :href="'https://'+ mempoolEndpoint + '/address/' + props.row.address"
               target="_blank"
-            >
-              ${props.row.address}</a
-            >
+              v-text="props.row.address"
+            ></a>
             <q-badge
               v-if="props.row.branch_index === 1"
               color="primary"
@@ -97,14 +96,14 @@
           :props="props"
           :class="props.row.amount > 0 ? 'text-green-13 text-weight-bold' : ''"
         >
-          <div>${satBtc(props.row.amount)}</div>
+            <div v-text="satBtc(props.row.amount)"></div>
         </q-td>
 
-        <q-td key="note" :props="props" :class="">
-          <div>${props.row.note}</div>
+        <q-td key="note" :props="props">
+            <div v-text="props.row.note"></div>
         </q-td>
-        <q-td key="wallet" :props="props" :class="">
-          <div>${getWalletName(props.row.wallet)}</div>
+        <q-td key="wallet" :props="props">
+            <div v-text="getWalletName(props.row.wallet)"></div>
         </q-td>
       </q-tr>
       <q-tr v-show="props.row.expanded" :props="props">
@@ -192,7 +191,9 @@
           <div v-if="props.row.error" class="row items-center no-wrap q-mb-md">
             <div class="col-2 q-pr-lg"></div>
             <div class="col-10 q-pr-lg">
-              <q-badge color="red">${props.row.error}</q-badge>
+              <q-badge color="red">
+                  <span v-text="props.row.error"></span>
+              </q-badge>
             </div>
           </div>
           <div

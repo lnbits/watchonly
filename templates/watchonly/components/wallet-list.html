@@ -1,4 +1,3 @@
-<div>
   <q-card>
     <q-card-section>
       <div class="row items-center no-wrap q-mb-md">
@@ -51,7 +50,7 @@
         :rows="walletAccounts"
         row-key="id"
         :columns="walletsTable.columns"
-        :pagination.sync="walletsTable.pagination"
+        v-model:pagination="walletsTable.pagination"
         :filter="filter"
       >
         <template v-slot:header="props">
@@ -62,8 +61,9 @@
               :key="col.name"
               :props="props"
               auto-width
+
             >
-              ${ col.label }
+              <span v-text="col.label"></span>
             </q-th>
             <q-th auto-width></q-th>
           </q-tr>
@@ -91,17 +91,17 @@
               </q-badge>
             </q-td>
 
-            <q-td key="title" :props="props" :class="">
-              <div>${props.row.title}</div>
+            <q-td key="title" :props="props">
+                <div v-text="props.row.title"></div>
             </q-td>
-            <q-td key="amount" :props="props" :class="">
-              <div>${getAmmountForWallet(props.row.id)}</div>
+            <q-td key="amount" :props="props">
+                <div v-text="getAmmountForWallet(props.row.id)"></div>
             </q-td>
-            <q-td key="type" :props="props" :class="">
-              <div>${props.row.type}</div>
+            <q-td key="type" :props="props">
+                <div v-text="props.row.type"></div>
             </q-td>
-            <q-td key="id" :props="props" :class="">
-              <div>${props.row.id}</div>
+            <q-td key="id" :props="props">
+                <div v-text="props.row.id"></div>
             </q-td>
           </q-tr>
           <q-tr v-show="props.row.expanded" :props="props">
@@ -117,7 +117,7 @@
                 </div>
 
                 <div class="col-4">
-                  ${getAccountDescription(props.row.type)}
+                    <span v-text="getAccountDescription(props.row.type)"></span>
                 </div>
                 <div class="col-2 q-pr-lg"></div>
               </div>
@@ -179,15 +179,15 @@
                 <div class="col-2 q-pr-lg">Last Address Index:</div>
                 <div class="col-8">
                   <span v-if="props.row.address_no >= 0"
-                    >${props.row.address_no}</span
-                  >
+                    v-text="props.row.address_no">
+                  </span>
                   <span v-if="props.row.address_no < 0">none</span>
                 </div>
                 <div class="col-2 q-pr-lg"></div>
               </div>
               <div class="row items-center no-wrap q-mb-md">
                 <div class="col-2 q-pr-lg">Fingerprint:</div>
-                <div class="col-8">${props.row.fingerprint}</div>
+                <div class="col-8" v-text="props.row.fingerprint"></div>
                 <div class="col-2 q-pr-lg"></div>
               </div>
               <div class="row items-center q-mt-md q-mb-lg">
@@ -273,12 +273,7 @@
   <q-dialog v-model="showQrCodeDialog" position="top">
     <q-card class="q-pa-lg q-pt-xl lnbits__dialog-card">
       <q-responsive :ratio="1" class="q-mx-xl q-mb-md">
-        <qrcode
-          :value="qrCodeValue"
-          :options="{width: 800}"
-          class="rounded-borders"
-        ></qrcode>
+        <lnbits-qrcode :value="qrCodeValue"></lnbits-qrcode>
       </q-responsive>
     </q-card>
   </q-dialog>
-</div>

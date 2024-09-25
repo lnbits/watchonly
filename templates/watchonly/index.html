@@ -179,7 +179,7 @@
     <q-card>
       <q-card-section>
         <h6 class="text-subtitle1 q-my-none">
-          {{SITE_TITLE}} Onchain Wallet (watch-only) Extension
+          Onchain Wallet (watch-only) Extension
           <small>(v0.3)</small>
         </h6>
       </q-card-section>
@@ -189,19 +189,16 @@
       </q-card-section>
     </q-card>
   </div>
-  {% raw %}
   <q-dialog v-model="showAddress" position="top">
     <q-card class="q-pa-lg lnbits__dialog-card">
       <h5 class="text-subtitle1 q-my-none">Address Details</h5>
       <q-separator></q-separator><br />
 
       <q-responsive :ratio="1" class="q-mx-xl q-mb-md">
-        <qrcode
+        <lnbits-qrcode
           v-if="currentAddress"
           :value="currentAddress.address"
-          :options="{width: 800}"
-          class="rounded-borders"
-        ></qrcode>
+        ></lnbits-qrcode>
       </q-responsive>
       <p v-if="currentAddress">
         <q-btn
@@ -211,10 +208,9 @@
           icon="content_copy"
           @click="copyText(currentAddress.address)"
           class="q-ml-sm"
+
         ></q-btn>
-
-        {{ currentAddress.address }}
-
+        <span v-text="currentAddress.address"></span>
         <q-btn
           flat
           dense
@@ -286,15 +282,15 @@
     </q-card>
   </q-dialog>
 
-  {% endraw %}
 </div>
 
 {% endblock %} {% block vue_templates %}
-<template id="my-checkbox"
-  >{% include("watchonly/components/my-checkbox.html") %}</template
->
+
 <template id="wallet-config"
   >{% include("watchonly/components/wallet-config.html") %}</template
+>
+<template id="utxo-list"
+  >{% include("watchonly/components/utxo-list.html") %}</template
 >
 <template id="wallet-list"
   >{% include("watchonly/components/wallet-list.html") %}</template
@@ -302,11 +298,11 @@
 <template id="address-list"
   >{% include("watchonly/components/address-list.html") %}</template
 >
+<template id="my-checkbox"
+  >{% include("watchonly/components/my-checkbox.html") %}</template
+>
 <template id="history"
   >{% include("watchonly/components/history.html") %}</template
->
-<template id="utxo-list"
-  >{% include("watchonly/components/utxo-list.html") %}</template
 >
 <template id="fee-rate"
   >{% include("watchonly/components/fee-rate.html") %}</template
