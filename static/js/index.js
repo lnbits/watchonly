@@ -1,8 +1,8 @@
-Vue.filter('reverse', function (value) {
-  // slice to make a copy of array, then reverse the copy
-  return value.slice().reverse()
-})
-
+// TODO were was this needed?
+// Vue.filter('reverse', function (value) {
+//   // slice to make a copy of array, then reverse the copy
+//   return value.slice().reverse()
+// })
 window.app = Vue.createApp({
   el: '#vue',
   mixins: [window.windowMixin],

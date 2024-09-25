@@ -68,7 +68,7 @@
               :href="'https://'+ mempoolEndpoint + '/address/' + props.row.address"
               target="_blank"
             >
-              {{props.row.address}}</a
+              ${props.row.address}</a
             >
             <q-badge
               v-if="props.row.branch_index === 1"
@@ -97,14 +97,14 @@
           :props="props"
           :class="props.row.amount > 0 ? 'text-green-13 text-weight-bold' : ''"
         >
-          <div>{{satBtc(props.row.amount)}}</div>
+          <div>${satBtc(props.row.amount)}</div>
         </q-td>
 
         <q-td key="note" :props="props" :class="">
-          <div>{{props.row.note}}</div>
+          <div>${props.row.note}</div>
         </q-td>
         <q-td key="wallet" :props="props" :class="">
-          <div>{{getWalletName(props.row.wallet)}}</div>
+          <div>${getWalletName(props.row.wallet)}</div>
         </q-td>
       </q-tr>
       <q-tr v-show="props.row.expanded" :props="props">
@@ -192,7 +192,7 @@
           <div v-if="props.row.error" class="row items-center no-wrap q-mb-md">
             <div class="col-2 q-pr-lg"></div>
             <div class="col-10 q-pr-lg">
-              <q-badge color="red">{{props.row.error}}</q-badge>
+              <q-badge color="red">${props.row.error}</q-badge>
             </div>
           </div>
           <div

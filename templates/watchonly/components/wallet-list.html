@@ -63,7 +63,7 @@
               :props="props"
               auto-width
             >
-              {{ col.label }}
+              ${ col.label }
             </q-th>
             <q-th auto-width></q-th>
           </q-tr>
@@ -92,16 +92,16 @@
             </q-td>
 
             <q-td key="title" :props="props" :class="">
-              <div>{{props.row.title}}</div>
+              <div>${props.row.title}</div>
             </q-td>
             <q-td key="amount" :props="props" :class="">
-              <div>{{getAmmountForWallet(props.row.id)}}</div>
+              <div>${getAmmountForWallet(props.row.id)}</div>
             </q-td>
             <q-td key="type" :props="props" :class="">
-              <div>{{props.row.type}}</div>
+              <div>${props.row.type}</div>
             </q-td>
             <q-td key="id" :props="props" :class="">
-              <div>{{props.row.id}}</div>
+              <div>${props.row.id}</div>
             </q-td>
           </q-tr>
           <q-tr v-show="props.row.expanded" :props="props">
@@ -117,7 +117,7 @@
                 </div>
 
                 <div class="col-4">
-                  {{getAccountDescription(props.row.type)}}
+                  ${getAccountDescription(props.row.type)}
                 </div>
                 <div class="col-2 q-pr-lg"></div>
               </div>
@@ -179,7 +179,7 @@
                 <div class="col-2 q-pr-lg">Last Address Index:</div>
                 <div class="col-8">
                   <span v-if="props.row.address_no >= 0"
-                    >{{props.row.address_no}}</span
+                    >${props.row.address_no}</span
                   >
                   <span v-if="props.row.address_no < 0">none</span>
                 </div>
@@ -187,7 +187,7 @@
               </div>
               <div class="row items-center no-wrap q-mb-md">
                 <div class="col-2 q-pr-lg">Fingerprint:</div>
-                <div class="col-8">{{props.row.fingerprint}}</div>
+                <div class="col-8">${props.row.fingerprint}</div>
                 <div class="col-2 q-pr-lg"></div>
               </div>
               <div class="row items-center q-mt-md q-mb-lg">

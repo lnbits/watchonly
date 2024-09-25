@@ -314,9 +314,6 @@
 <template id="fee-rate"
   >{% include("watchonly/components/fee-rate.html") %}</template
 >
-<template id="fee-rate-selector"
-  >{% include("watchonly/components/fee-rate-selector.html") %}</template
->
 <template id="seed-input"
   >{% include("watchonly/components/seed-input.html") %}</template
 >
@@ -335,8 +332,7 @@
 <template id="serial-port-config"
   >{% include("watchonly/components/serial-port-config.html") %}</template
 >
-{% endblock %} {% block scripts %} {{
-window_vars(user) }}
+{% endblock %} {% block scripts %} {{ window_vars(user) }}
 <style>
   .btn-full {
     width: 100%;
@@ -350,6 +346,8 @@ window_vars(user) }}
 <script src="{{ static_url_for('watchonly/static', 'js/utils.js') }}"></script>
 <script src="{{ static_url_for('watchonly/static', 'js/bip39-word-list.js') }}"></script>
 
+<script src="{{ static_url_for('watchonly/static', 'js/index.js') }}"></script>
+
 <script src="{{ static_url_for('watchonly/static', 'components/my-checkbox.js') }}"></script>
 <script src="{{ static_url_for('watchonly/static', 'components/wallet-config.js') }}"></script>
 <script src="{{ static_url_for('watchonly/static', 'components/wallet-list.js') }}"></script>
@@ -357,21 +355,18 @@ window_vars(user) }}
 <script src="{{ static_url_for('watchonly/static', 'components/history.js') }}"></script>
 <script src="{{ static_url_for('watchonly/static', 'components/utxo-list.js') }}"></script>
 <script src="{{ static_url_for('watchonly/static', 'components/fee-rate.js') }}"></script>
-<script src="{{ static_url_for('watchonly/static', 'components/fee-rate-selector.js') }}"></script>
 <script src="{{ static_url_for('watchonly/static', 'components/seed-input.js') }}"></script>
 <script src="{{ static_url_for('watchonly/static', 'components/send-to.js') }}"></script>
 <script src="{{ static_url_for('watchonly/static', 'components/payment.js') }}"></script>
 <script src="{{ static_url_for('watchonly/static', 'components/serial-signer.js') }}"></script>
 <script src="{{ static_url_for('watchonly/static', 'components/trezor-signer.js') }}"></script>
 <script src="{{ static_url_for('watchonly/static', 'components/serial-port-config.js') }}"></script>
-
 <script src="{{ static_url_for('watchonly/static', 'js/crypto/noble-secp256k1.js') }}"></script>
 <script src="{{ static_url_for('watchonly/static', 'js/crypto/aes.js') }}"></script>
 <script src="{{ static_url_for('watchonly/static', 'js/lib/trezor-web-connect.js') }}"></script>
+
 <script>
   window.TrezorConnect = window.trezor.default
 </script>
-
-<script src="{{ static_url_for('watchonly/static', 'js/index.js') }}"></script>
 
 {% endblock %}

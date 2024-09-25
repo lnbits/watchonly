@@ -55,10 +55,10 @@
       >
         <q-item-section>
           <q-item-label @click="openSerialPortConfig(device.id)"
-            >Paired Device ({{device.config.name || 'no-name'}})
+            >Paired Device (${device.config.name || 'no-name'})
           </q-item-label>
           <q-item-label caption @click="openSerialPortConfig(device.id)"
-            >{{device.id}}
+            >${device.id}
           </q-item-label>
           <q-item-label caption @click="removePairedDevice(device.id)">
             <q-btn v-close-popup flat color="grey" class="q-ml-auto"
@@ -219,7 +219,7 @@
           <div v-if="!hww.confirm.showFee" class="row q-mt-lg">
             <div class="col-12">
               <span class="text-subtitle2"
-                >Output {{hww.confirm.outputIndex}}</span
+                >Output ${hww.confirm.outputIndex}</span
               >
               <q-badge
                 v-if="tx.outputs[hww.confirm.outputIndex].branch_index === 1"
@@ -235,7 +235,7 @@
               <span>Address:</span>
             </div>
             <div class="col-9">
-              <span>{{tx.outputs[hww.confirm.outputIndex].address}}</span>
+              <span>${tx.outputs[hww.confirm.outputIndex].address}</span>
             </div>
           </div>
           <div v-if="!hww.confirm.showFee" class="row q-mt-lg">
@@ -243,9 +243,7 @@
               <span>Amount:</span>
             </div>
             <div class="col-9">
-              <span
-                >{{satBtc(tx.outputs[hww.confirm.outputIndex].amount)}}</span
-              >
+              <span>${satBtc(tx.outputs[hww.confirm.outputIndex].amount)}</span>
             </div>
           </div>
           <div v-if="hww.confirm.showFee" class="row q-mt-lg">
@@ -253,7 +251,7 @@
               <span>Fee: </span>
             </div>
             <div class="col-9">
-              <span>{{satBtc(tx.feeValue)}}</span>
+              <span>${satBtc(tx.feeValue)}</span>
             </div>
           </div>
           <div v-if="hww.confirm.showFee" class="row q-mt-lg">
@@ -261,7 +259,7 @@
               <span>Fee Rate:</span>
             </div>
             <div class="col-9">
-              <span>{{tx.feeRate}} sats/vbyte</span>
+              <span>${tx.feeRate} sats/vbyte</span>
             </div>
           </div>
         </div>
@@ -406,7 +404,7 @@
 
   <q-dialog v-model="hww.showSeedDialog" @hide="closeSeedDialog" position="top">
     <q-card class="q-pa-lg q-pt-xl">
-      <span>Check word at position {{hww.seedWordPosition}} on device</span>
+      <span>Check word at position ${hww.seedWordPosition} on device</span>
       <div class="row q-mt-lg">
         <div class="col-12">
           <q-toggle

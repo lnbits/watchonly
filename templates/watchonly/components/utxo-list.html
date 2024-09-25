@@ -92,7 +92,7 @@
                 :href="'https://' + mempoolEndpoint + '/address/' + props.row.address"
                 target="_blank"
               >
-                {{props.row.address}}</a
+                ${props.row.address}</a
               >
               <q-badge
                 v-if="props.row.isChange"
@@ -116,12 +116,12 @@
             :props="props"
             class="text-green-13 text-weight-bold"
           >
-            <div>{{satBtc(props.row.amount)}}</div>
+            <div>${satBtc(props.row.amount)}</div>
           </q-td>
 
-          <q-td key="date" :props="props"> {{ props.row.date }} </q-td>
+          <q-td key="date" :props="props"> ${ props.row.date } </q-td>
           <q-td key="wallet" :props="props" :class="">
-            <div>{{getWalletName(props.row.wallet)}}</div>
+            <div>${getWalletName(props.row.wallet)}</div>
           </q-td>
         </q-tr>
         <q-tr v-show="props.row.expanded" :props="props">
@@ -134,7 +134,7 @@
                   :href="'https://' + mempoolEndpoint + '/tx/' + props.row.txId"
                   target="_blank"
                 >
-                  {{props.row.txId}}</a
+                  ${props.row.txId}</a
                 >
               </div>
             </div>
