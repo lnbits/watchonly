@@ -119,7 +119,7 @@
           </q-td>
           <q-td key="date" :props="props" v-text="props.row.date"></q-td>
           <q-td key="wallet" :props="props">
-              <div v-text="getWalletName(props.row.wallet)"></div>
+            <div v-text="getWalletName(props.row.wallet)"></div>
           </q-td>
         </q-tr>
         <q-tr v-show="props.row.expanded" :props="props">
@@ -138,6 +138,5 @@
           </q-td>
         </q-tr>
       </template>
-    </q-table>
-  </q-card-section></q-card
->
+    </q-table> </q-card-section
+></q-card>

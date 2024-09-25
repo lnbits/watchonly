@@ -96,14 +96,14 @@
           :props="props"
           :class="props.row.amount > 0 ? 'text-green-13 text-weight-bold' : ''"
         >
-            <div v-text="satBtc(props.row.amount)"></div>
+          <div v-text="satBtc(props.row.amount)"></div>
         </q-td>
 
         <q-td key="note" :props="props">
-            <div v-text="props.row.note"></div>
+          <div v-text="props.row.note"></div>
         </q-td>
         <q-td key="wallet" :props="props">
-            <div v-text="getWalletName(props.row.wallet)"></div>
+          <div v-text="getWalletName(props.row.wallet)"></div>
         </q-td>
       </q-tr>
       <q-tr v-show="props.row.expanded" :props="props">
@@ -192,7 +192,7 @@
             <div class="col-2 q-pr-lg"></div>
             <div class="col-10 q-pr-lg">
               <q-badge color="red">
-                  <span v-text="props.row.error"></span>
+                <span v-text="props.row.error"></span>
               </q-badge>
             </div>
           </div>
