@@ -2,7 +2,7 @@ import json
 from typing import Optional
 
 from lnbits.db import Database
-from lnbits.helpers import insert_query, update_query, urlsafe_short_hash
+from lnbits.helpers import urlsafe_short_hash
 
 from .helpers import derive_address
 from .models import Address, Config, WalletAccount
@@ -11,10 +11,7 @@ db = Database("ext_watchonly")
 
 
 async def create_watch_wallet(wallet: WalletAccount) -> WalletAccount:
-    await db.execute(
-        insert_query("watchonly.wallets", wallet),
-        wallet.dict(),
-    )
+    await db.insert("watchonly.wallets", wallet)
     return wallet
 
 
@@ -38,10 +35,7 @@ async def get_watch_wallets(user: str, network: str) -> list[WalletAccount]:
 
 
 async def update_watch_wallet(wallet: WalletAccount) -> WalletAccount:
-    await db.execute(
-        update_query("watchonly.wallets", wallet),
-        wallet.dict(),
-    )
+    await db.update("watchonly.wallets", wallet)
     return wallet
 
 
@@ -115,10 +109,7 @@ async def create_fresh_addresses(
             address_index=address_index,
         )
 
-        await db.execute(
-            insert_query("watchonly.addresses", addr),
-            addr.dict(),
-        )
+        await db.insert("watchonly.addresses", addr)
 
     # return fresh addresses
     rows = await db.fetchall(
@@ -187,10 +178,7 @@ async def get_addresses(wallet_id: str) -> list[Address]:
 
 
 async def update_address(address: Address) -> Address:
-    await db.execute(
-        update_query("watchonly.addresses", address),
-        address.dict(),
-    )
+    await db.update("watchonly.addresses", address)
     return address
 
 

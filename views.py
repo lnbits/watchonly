@@ -14,5 +14,5 @@ def watchonly_renderer():
 @watchonly_generic_router.get("/", response_class=HTMLResponse)
 async def index(request: Request, user: User = Depends(check_user_exists)):
     return watchonly_renderer().TemplateResponse(
-        "watchonly/index.html", {"request": request, "user": user.dict()}
+        "watchonly/index.html", {"request": request, "user": user.json()}
     )
