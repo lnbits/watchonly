@@ -48,7 +48,7 @@ def parse_key(masterpub: str) -> Tuple[Descriptor, Optional[dict]]:
                 elif version == net["ypub"]:
                     desc = Descriptor.from_string(f"sh(wpkh({k!s}))")
                 elif version == net["zpub"]:
-                    desc = Descriptor.from_string(f"wpkh({k!s}")
+                    desc = Descriptor.from_string(f"wpkh({k!s})")
                 break
         # we didn't find correct version
         if not network:
