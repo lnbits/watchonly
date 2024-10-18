@@ -94,3 +94,8 @@ class Config(BaseModel):
     change_gap_limit = 5
     sats_denominated = True
     network = "Mainnet"
+
+
+class ConfigDb(BaseModel):
+    user: str
+    json_data: Config

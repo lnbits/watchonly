@@ -1,11 +1,10 @@
-import json
 from typing import Optional
 
 from lnbits.db import Database
 from lnbits.helpers import urlsafe_short_hash
 
 from .helpers import derive_address
-from .models import Address, Config, WalletAccount
+from .models import Address, Config, ConfigDb, WalletAccount
 
 db = Database("ext_watchonly")
 
@@ -16,22 +15,22 @@ async def create_watch_wallet(wallet: WalletAccount) -> WalletAccount:
 
 
 async def get_watch_wallet(wallet_id: str) -> Optional[WalletAccount]:
-    row = await db.fetchone(
+    return await db.fetchone(
         "SELECT * FROM watchonly.wallets WHERE id = :id",
         {"id": wallet_id},
+        WalletAccount,
     )
-    return WalletAccount(**row) if row else None
 
 
 async def get_watch_wallets(user: str, network: str) -> list[WalletAccount]:
-    rows = await db.fetchall(
+    return await db.fetchall(
         """
         SELECT * FROM watchonly.wallets
         WHERE "user" = :user AND network = :network
         """,
         {"user": user, "network": network},
+        WalletAccount,
     )
-    return [WalletAccount(**row) for row in rows]
 
 
 async def update_watch_wallet(wallet: WalletAccount) -> WalletAccount:
@@ -112,7 +111,7 @@ async def create_fresh_addresses(
         await db.insert("watchonly.addresses", addr)
 
     # return fresh addresses
-    rows = await db.fetchall(
+    return await db.fetchall(
         """
             SELECT * FROM watchonly.addresses WHERE wallet = :wallet
             AND branch_index = :branch_index
@@ -126,31 +125,28 @@ async def create_fresh_addresses(
             "start_address_index": start_address_index,
             "end_address_index": end_address_index,
         },
+        Address,
     )
-
-    return [Address(**row) for row in rows]
 
 
 async def get_address(address: str) -> Optional[Address]:
-    row = await db.fetchone(
+    return await db.fetchone(
         "SELECT * FROM watchonly.addresses WHERE address = :address",
         {"address": address},
     )
-    return Address(**row) if row else None
 
 
 async def get_address_by_id(address_id: str) -> Optional[Address]:
-    row = await db.fetchone(
+    return await db.fetchone(
         "SELECT * FROM watchonly.addresses WHERE id = :id",
         {"id": address_id},
     )
-    return Address(**row) if row else None
 
 
 async def get_address_at_index(
     wallet_id: str, branch_index: int, address_index: int
 ) -> Optional[Address]:
-    row = await db.fetchone(
+    return await db.fetchone(
         """
             SELECT * FROM watchonly.addresses
             WHERE wallet = :wallet AND branch_index = :branch_index
@@ -161,20 +157,19 @@ async def get_address_at_index(
             "branch_index": branch_index,
             "address_index": address_index,
         },
+        Address,
     )
-    return Address(**row) if row else None
 
 
 async def get_addresses(wallet_id: str) -> list[Address]:
-    rows = await db.fetchall(
+    return await db.fetchall(
         """
         SELECT * FROM watchonly.addresses WHERE wallet = :wallet
         ORDER BY branch_index, address_index
         """,
         {"wallet": wallet_id},
+        Address,
     )
-
-    return [Address(**row) for row in rows]
 
 
 async def update_address(address: Address) -> Address:
@@ -190,37 +185,20 @@ async def delete_addresses_for_wallet(wallet_id: str) -> None:
 
 async def create_config(user: str) -> Config:
     config = Config()
-    await db.execute(
-        """
-        INSERT INTO watchonly.config ("user", json_data)
-        VALUES (:user, :data)
-        """,
-        {"user": user, "data": json.dumps(config.dict())},
-    )
-    row = await db.fetchone(
-        """SELECT json_data FROM watchonly.config WHERE "user" = :user""",
-        {"user": user},
-    )
-    return json.loads(row["json_data"], object_hook=lambda d: Config(**d))
+    await db.insert("watchonly.config", ConfigDb(user=user, json_data=config))
+    return config
 
 
 async def update_config(config: Config, user: str) -> Config:
-    await db.execute(
-        """UPDATE watchonly.config SET json_data = :data WHERE "user" = :user""",
-        {"data": json.dumps(config.dict()), "user": user},
-    )
-    row = await db.fetchone(
-        """SELECT json_data FROM watchonly.config WHERE "user" = :user""",
-        {"user": user},
-    )
-    return json.loads(row["json_data"], object_hook=lambda d: Config(**d))
+    _config = ConfigDb(user=user, json_data=config)
+    await db.insert("watchonly.config", _config)
+    return config
 
 
 async def get_config(user: str) -> Optional[Config]:
-    row = await db.fetchone(
-        """SELECT json_data FROM watchonly.config WHERE "user" = :user""",
+    _config = await db.fetchone(
+        """SELECT * FROM watchonly.config WHERE "user" = :user""",
         {"user": user},
+        ConfigDb,
     )
-    return (
-        json.loads(row["json_data"], object_hook=lambda d: Config(**d)) if row else None
-    )
+    return _config.json_data
