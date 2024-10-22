@@ -13,7 +13,6 @@ from lnbits.decorators import require_admin_key, require_invoice_key
 from lnbits.helpers import urlsafe_short_hash
 
 from .crud import (
-    create_config,
     create_fresh_addresses,
     create_watch_wallet,
     delete_addresses_for_wallet,
@@ -117,9 +116,6 @@ async def api_wallet_create_or_update(
             status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)
         ) from exc
 
-    config = await get_config(key_info.wallet.user)
-    if not config:
-        await create_config(user=key_info.wallet.user)
     return wallet
 
 
@@ -408,7 +404,6 @@ async def api_update_config(
     data: Config, key_info: WalletTypeInfo = Depends(require_admin_key)
 ) -> Config:
     config = await update_config(data, user=key_info.wallet.user)
-    assert config
     return config
 
 
@@ -417,6 +412,4 @@ async def api_get_config(
     key_info: WalletTypeInfo = Depends(require_invoice_key),
 ) -> Config:
     config = await get_config(key_info.wallet.user)
-    if not config:
-        config = await create_config(user=key_info.wallet.user)
     return config

@@ -191,14 +191,16 @@ async def create_config(user: str) -> Config:
 
 async def update_config(config: Config, user: str) -> Config:
     _config = ConfigDb(user=user, json_data=config)
-    await db.insert("watchonly.config", _config)
+    await db.update("watchonly.config", _config, """WHERE "user" = :user""")
     return config
 
 
-async def get_config(user: str) -> Optional[Config]:
+async def get_config(user: str) -> Config:
     _config = await db.fetchone(
         """SELECT * FROM watchonly.config WHERE "user" = :user""",
         {"user": user},
         ConfigDb,
     )
+    if not _config:
+        return await create_config(user)
     return _config.json_data
