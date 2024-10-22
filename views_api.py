@@ -159,7 +159,7 @@ async def api_update_address(address_id: str, req: Request):
         )
 
     body = await req.json()
-    # amout is only updated if the address has history
+    # amount is only updated if the address has history
     if "amount" in body:
         address.amount = int(body["amount"])
         address.has_activity = True

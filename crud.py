@@ -133,6 +133,7 @@ async def get_address(address: str) -> Optional[Address]:
     return await db.fetchone(
         "SELECT * FROM watchonly.addresses WHERE address = :address",
         {"address": address},
+        Address,
     )
 
 
@@ -140,6 +141,7 @@ async def get_address_by_id(address_id: str) -> Optional[Address]:
     return await db.fetchone(
         "SELECT * FROM watchonly.addresses WHERE id = :id",
         {"id": address_id},
+        Address,
     )
 
 

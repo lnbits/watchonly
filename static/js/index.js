@@ -361,8 +361,6 @@ window.app = Vue.createApp({
       return retryWithDelay(fn)
     },
 
-    //################### OTHER ###################
-
     openQrCodeDialog: function (addressData) {
       this.currentAddress = addressData
       this.addressNote = addressData.note || ''
