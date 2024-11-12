@@ -1,83 +1,48 @@
-import json
 from typing import Optional
 
 from lnbits.db import Database
 from lnbits.helpers import urlsafe_short_hash
 
 from .helpers import derive_address
-from .models import Address, Config, WalletAccount
+from .models import Address, Config, ConfigDb, WalletAccount
 
 db = Database("ext_watchonly")
 
 
-async def create_watch_wallet(user: str, w: WalletAccount) -> WalletAccount:
-    wallet_id = urlsafe_short_hash()
-    await db.execute(
-        """
-        INSERT INTO watchonly.wallets (
-            id,
-            "user",
-            masterpub,
-            fingerprint,
-            title,
-            type,
-            address_no,
-            balance,
-            network,
-            meta
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            wallet_id,
-            user,
-            w.masterpub,
-            w.fingerprint,
-            w.title,
-            w.type,
-            w.address_no,
-            w.balance,
-            w.network,
-            w.meta,
-        ),
-    )
-    wallet = await get_watch_wallet(wallet_id)
-    assert wallet
+async def create_watch_wallet(wallet: WalletAccount) -> WalletAccount:
+    await db.insert("watchonly.wallets", wallet)
     return wallet
 
 
 async def get_watch_wallet(wallet_id: str) -> Optional[WalletAccount]:
-    row = await db.fetchone(
-        "SELECT * FROM watchonly.wallets WHERE id = ?", (wallet_id,)
+    return await db.fetchone(
+        "SELECT * FROM watchonly.wallets WHERE id = :id",
+        {"id": wallet_id},
+        WalletAccount,
     )
-    return WalletAccount.from_row(row) if row else None
 
 
 async def get_watch_wallets(user: str, network: str) -> list[WalletAccount]:
-    rows = await db.fetchall(
-        """SELECT * FROM watchonly.wallets WHERE "user" = ? AND network = ?""",
-        (user, network),
+    return await db.fetchall(
+        """
+        SELECT * FROM watchonly.wallets
+        WHERE "user" = :user AND network = :network
+        """,
+        {"user": user, "network": network},
+        WalletAccount,
     )
-    return [WalletAccount(**row) for row in rows]
 
 
-async def update_watch_wallet(wallet_id: str, **kwargs) -> Optional[WalletAccount]:
-    q = ", ".join([f"{field[0]} = ?" for field in kwargs.items()])
-
-    await db.execute(
-        f"UPDATE watchonly.wallets SET {q} WHERE id = ?", (*kwargs.values(), wallet_id)
-    )
-    row = await db.fetchone(
-        "SELECT * FROM watchonly.wallets WHERE id = ?", (wallet_id,)
-    )
-    return WalletAccount.from_row(row) if row else None
+async def update_watch_wallet(wallet: WalletAccount) -> WalletAccount:
+    await db.update("watchonly.wallets", wallet)
+    return wallet
 
 
 async def delete_watch_wallet(wallet_id: str) -> None:
-    await db.execute("DELETE FROM watchonly.wallets WHERE id = ?", (wallet_id,))
-
-
-########################ADDRESSES#######################
+    await db.execute(
+        "DELETE FROM watchonly.wallets WHERE id = :id",
+        {"id": wallet_id},
+    )
 
 
 async def get_fresh_address(wallet_id: str) -> Optional[Address]:
@@ -110,7 +75,8 @@ async def get_fresh_address(wallet_id: str) -> Optional[Address]:
         )
         address = addresses.pop()
 
-    await update_watch_wallet(wallet_id, **{"address_no": address_index + 1})
+    wallet.address_no = address_index + 1
+    await update_watch_wallet(wallet)
 
     return address
 
@@ -132,118 +98,111 @@ async def create_fresh_addresses(
 
     for address_index in range(start_address_index, end_address_index):
         address = await derive_address(wallet.masterpub, address_index, branch_index)
+        assert address  # TODO: why optional
 
-        await db.execute(
-            """
-        INSERT INTO watchonly.addresses (
-            id,
-            address,
-            wallet,
-            amount,
-            branch_index,
-            address_index
+        addr = Address(
+            id=urlsafe_short_hash(),
+            address=address,
+            wallet=wallet_id,
+            branch_index=branch_index,
+            address_index=address_index,
         )
-        VALUES (?, ?, ?, ?, ?, ?)
-        """,
-            (urlsafe_short_hash(), address, wallet_id, 0, branch_index, address_index),
-        )
+
+        await db.insert("watchonly.addresses", addr)
 
     # return fresh addresses
-    rows = await db.fetchall(
+    return await db.fetchall(
         """
-            SELECT * FROM watchonly.addresses
-            WHERE wallet = ? AND branch_index = ?
-            AND address_index >= ? AND address_index < ?
+            SELECT * FROM watchonly.addresses WHERE wallet = :wallet
+            AND branch_index = :branch_index
+            AND address_index >= :start_address_index
+            AND address_index < :end_address_index
             ORDER BY branch_index, address_index
         """,
-        (wallet_id, branch_index, start_address_index, end_address_index),
+        {
+            "wallet": wallet_id,
+            "branch_index": branch_index,
+            "start_address_index": start_address_index,
+            "end_address_index": end_address_index,
+        },
+        Address,
     )
-
-    return [Address(**row) for row in rows]
 
 
 async def get_address(address: str) -> Optional[Address]:
-    row = await db.fetchone(
-        "SELECT * FROM watchonly.addresses WHERE address = ?", (address,)
+    return await db.fetchone(
+        "SELECT * FROM watchonly.addresses WHERE address = :address",
+        {"address": address},
+        Address,
     )
-    return Address.from_row(row) if row else None
+
+
+async def get_address_by_id(address_id: str) -> Optional[Address]:
+    return await db.fetchone(
+        "SELECT * FROM watchonly.addresses WHERE id = :id",
+        {"id": address_id},
+        Address,
+    )
 
 
 async def get_address_at_index(
     wallet_id: str, branch_index: int, address_index: int
 ) -> Optional[Address]:
-    row = await db.fetchone(
+    return await db.fetchone(
         """
             SELECT * FROM watchonly.addresses
-            WHERE wallet = ? AND branch_index = ? AND address_index = ?
+            WHERE wallet = :wallet AND branch_index = :branch_index
+            AND address_index = :address_index
         """,
-        (
-            wallet_id,
-            branch_index,
-            address_index,
-        ),
+        {
+            "wallet": wallet_id,
+            "branch_index": branch_index,
+            "address_index": address_index,
+        },
+        Address,
     )
-    return Address.from_row(row) if row else None
 
 
 async def get_addresses(wallet_id: str) -> list[Address]:
-    rows = await db.fetchall(
+    return await db.fetchall(
         """
-            SELECT * FROM watchonly.addresses WHERE wallet = ?
-            ORDER BY branch_index, address_index
+        SELECT * FROM watchonly.addresses WHERE wallet = :wallet
+        ORDER BY branch_index, address_index
         """,
-        (wallet_id,),
+        {"wallet": wallet_id},
+        Address,
     )
 
-    return [Address(**row) for row in rows]
 
-
-async def update_address(address_id: str, **kwargs) -> Address:
-    q = ", ".join([f"{field[0]} = ?" for field in kwargs.items()])
-
-    await db.execute(
-        f"""UPDATE watchonly.addresses SET {q} WHERE id = ? """,
-        (*kwargs.values(), address_id),
-    )
-    row = await db.fetchone(
-        "SELECT * FROM watchonly.addresses WHERE id = ?", (address_id,)
-    )
-    assert row, "updated address not found"
-    return Address.from_row(row)
+async def update_address(address: Address) -> Address:
+    await db.update("watchonly.addresses", address)
+    return address
 
 
 async def delete_addresses_for_wallet(wallet_id: str) -> None:
-    await db.execute("DELETE FROM watchonly.addresses WHERE wallet = ?", (wallet_id,))
+    await db.execute(
+        "DELETE FROM watchonly.addresses WHERE wallet = :wallet", {"wallet": wallet_id}
+    )
 
 
 async def create_config(user: str) -> Config:
     config = Config()
-    await db.execute(
-        """
-        INSERT INTO watchonly.config ("user", json_data)
-        VALUES (?, ?)
-        """,
-        (user, json.dumps(config.dict())),
-    )
-    row = await db.fetchone(
-        """SELECT json_data FROM watchonly.config WHERE "user" = ?""", (user,)
-    )
-    return json.loads(row[0], object_hook=lambda d: Config(**d))
+    await db.insert("watchonly.config", ConfigDb(user=user, json_data=config))
+    return config
 
 
-async def update_config(config: Config, user: str) -> Optional[Config]:
-    await db.execute(
-        """UPDATE watchonly.config SET json_data = ? WHERE "user" = ?""",
-        (json.dumps(config.dict()), user),
-    )
-    row = await db.fetchone(
-        """SELECT json_data FROM watchonly.config WHERE "user" = ?""", (user,)
-    )
-    return json.loads(row[0], object_hook=lambda d: Config(**d))
+async def update_config(config: Config, user: str) -> Config:
+    _config = ConfigDb(user=user, json_data=config)
+    await db.update("watchonly.config", _config, """WHERE "user" = :user""")
+    return config
 
 
-async def get_config(user: str) -> Optional[Config]:
-    row = await db.fetchone(
-        """SELECT json_data FROM watchonly.config WHERE "user" = ?""", (user,)
+async def get_config(user: str) -> Config:
+    _config = await db.fetchone(
+        """SELECT * FROM watchonly.config WHERE "user" = :user""",
+        {"user": user},
+        ConfigDb,
     )
-    return json.loads(row[0], object_hook=lambda d: Config(**d)) if row else None
+    if not _config:
+        return await create_config(user)
+    return _config.json_data

@@ -41,7 +41,7 @@
     <q-table
       flat
       dense
-      :data="utxos"
+      :rows="utxos"
       row-key="id"
       :columns="columns"
       :pagination.sync="utxosTable.pagination"
@@ -91,9 +91,8 @@
                 style="color: unset"
                 :href="'https://' + mempoolEndpoint + '/address/' + props.row.address"
                 target="_blank"
-              >
-                {{props.row.address}}</a
-              >
+                v-text="props.row.address"
+              ></a>
               <q-badge
                 v-if="props.row.isChange"
                 color="primary"
@@ -116,12 +115,11 @@
             :props="props"
             class="text-green-13 text-weight-bold"
           >
-            <div>{{satBtc(props.row.amount)}}</div>
+            <div v-text="satBtc(props.row.amount)"></div>
           </q-td>
-
-          <q-td key="date" :props="props"> {{ props.row.date }} </q-td>
-          <q-td key="wallet" :props="props" :class="">
-            <div>{{getWalletName(props.row.wallet)}}</div>
+          <q-td key="date" :props="props" v-text="props.row.date"></q-td>
+          <q-td key="wallet" :props="props">
+            <div v-text="getWalletName(props.row.wallet)"></div>
           </q-td>
         </q-tr>
         <q-tr v-show="props.row.expanded" :props="props">
@@ -133,14 +131,12 @@
                   style="color: unset"
                   :href="'https://' + mempoolEndpoint + '/tx/' + props.row.txId"
                   target="_blank"
-                >
-                  {{props.row.txId}}</a
-                >
+                  v-text="props.row.txId"
+                ></a>
               </div>
             </div>
           </q-td>
         </q-tr>
       </template>
-    </q-table>
-  </q-card-section></q-card
->
+    </q-table> </q-card-section
+></q-card>
