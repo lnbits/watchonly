@@ -1,7 +1,12 @@
-Monitor an onchain wallet and generate addresses for onchain payments.
+Monitor on-chain Bitcoin wallets and generate addresses without spending keys.
 
-Can be used directly with LNbits $10 hardware wallet/
+Its functions include:
 
-Monitor an extended public key and generate deterministic fresh public keys with this simple watch only wallet. Invoice payments can also be generated, both through a publically shareable page and API.
+- Importing extended public keys (xpub) for watch-only access
+- Generating fresh receiving addresses deterministically
+- Creating on-chain payment invoices
+- Integrating with other extensions for on-chain functionality
 
-Other extensions can make use of this extension to add onchain functionality.
+Essential for security-conscious users who want to monitor on-chain funds and generate receiving addresses while keeping private keys completely offline.
+
+Note: Essential extension for onchain operations in SatsPay
