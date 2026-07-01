@@ -8,8 +8,6 @@ from embit.networks import NETWORKS
 from embit.psbt import PSBT, DerivationPath
 from embit.transaction import Transaction, TransactionInput, TransactionOutput
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from lnbits.core.models import WalletTypeInfo
-from lnbits.decorators import require_admin_key, require_invoice_key
 from lnbits.helpers import urlsafe_short_hash
 
 from .crud import (
@@ -26,6 +24,11 @@ from .crud import (
     update_address,
     update_config,
     update_watch_wallet,
+)
+from .decorators import (
+    WatchOnlyAuth,
+    require_watchonly_admin_account,
+    require_watchonly_read_account,
 )
 from .helpers import parse_key
 from .models import (
@@ -46,28 +49,23 @@ watchonly_api_router = APIRouter()
 @watchonly_api_router.get("/api/v1/wallet")
 async def api_wallets_retrieve(
     network: str = Query("Mainnet"),
-    key_info: WalletTypeInfo = Depends(require_invoice_key),
+    auth: WatchOnlyAuth = Depends(require_watchonly_read_account),
 ) -> list[WalletAccount]:
-    return await get_watch_wallets(key_info.wallet.user, network)
+    return await get_watch_wallets(auth.user_id, network)
 
 
-@watchonly_api_router.get(
-    "/api/v1/wallet/{wallet_id}", dependencies=[Depends(require_invoice_key)]
-)
-async def api_wallet_retrieve(wallet_id: str) -> WalletAccount:
-    watch_wallet = await get_watch_wallet(wallet_id)
-
-    if not watch_wallet:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail="Wallet does not exist."
-        )
-
-    return watch_wallet
+@watchonly_api_router.get("/api/v1/wallet/{wallet_id}")
+async def api_wallet_retrieve(
+    wallet_id: str,
+    auth: WatchOnlyAuth = Depends(require_watchonly_read_account),
+) -> WalletAccount:
+    return await _get_user_watch_wallet(wallet_id, auth.user_id)
 
 
 @watchonly_api_router.post("/api/v1/wallet")
 async def api_wallet_create_or_update(
-    data: CreateWallet, key_info: WalletTypeInfo = Depends(require_admin_key)
+    data: CreateWallet,
+    auth: WatchOnlyAuth = Depends(require_watchonly_admin_account),
 ) -> WalletAccount:
     try:
         descriptor, network = parse_key(data.masterpub)
@@ -81,7 +79,7 @@ async def api_wallet_create_or_update(
 
         new_wallet = WalletAccount(
             id=urlsafe_short_hash(),
-            user=key_info.wallet.user,
+            user=auth.user_id,
             masterpub=data.masterpub,
             fingerprint=descriptor.keys[0].fingerprint.hex(),
             type=descriptor.scriptpubkey_type(),
@@ -92,7 +90,7 @@ async def api_wallet_create_or_update(
             meta=data.meta,
         )
 
-        wallets = await get_watch_wallets(key_info.wallet.user, network["name"])
+        wallets = await get_watch_wallets(auth.user_id, network["name"])
         existing_wallet = next(
             (
                 ew
@@ -110,7 +108,7 @@ async def api_wallet_create_or_update(
 
         wallet = await create_watch_wallet(new_wallet)
 
-        await api_get_addresses(wallet.id, key_info)
+        await api_get_addresses(wallet.id, auth)
     except Exception as exc:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)
@@ -119,17 +117,12 @@ async def api_wallet_create_or_update(
     return wallet
 
 
-@watchonly_api_router.delete(
-    "/api/v1/wallet/{wallet_id}", dependencies=[Depends(require_admin_key)]
-)
-async def api_wallet_delete(wallet_id: str):
-    wallet = await get_watch_wallet(wallet_id)
-
-    if not wallet:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail="Wallet does not exist."
-        )
-
+@watchonly_api_router.delete("/api/v1/wallet/{wallet_id}")
+async def api_wallet_delete(
+    wallet_id: str,
+    auth: WatchOnlyAuth = Depends(require_watchonly_admin_account),
+):
+    await _get_user_watch_wallet(wallet_id, auth.user_id)
     await delete_watch_wallet(wallet_id)
     await delete_addresses_for_wallet(wallet_id)
 
@@ -139,24 +132,30 @@ async def api_wallet_delete(wallet_id: str):
 #############################ADDRESSES##########################
 
 
-@watchonly_api_router.get(
-    "/api/v1/address/{wallet_id}", dependencies=[Depends(require_invoice_key)]
-)
-async def api_fresh_address(wallet_id: str) -> Address:
+@watchonly_api_router.get("/api/v1/address/{wallet_id}")
+async def api_fresh_address(
+    wallet_id: str,
+    auth: WatchOnlyAuth = Depends(require_watchonly_read_account),
+) -> Address:
+    await _get_user_watch_wallet(wallet_id, auth.user_id)
     address = await get_fresh_address(wallet_id)
     assert address
     return address
 
 
-@watchonly_api_router.put(
-    "/api/v1/address/{address_id}", dependencies=[Depends(require_admin_key)]
-)
-async def api_update_address(address_id: str, req: Request):
+@watchonly_api_router.put("/api/v1/address/{address_id}")
+async def api_update_address(
+    address_id: str,
+    req: Request,
+    auth: WatchOnlyAuth = Depends(require_watchonly_admin_account),
+):
     address = await get_address_by_id(address_id)
     if not address:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND, detail="Address does not exist."
         )
+
+    await _get_user_watch_wallet(address.wallet, auth.user_id)
 
     body = await req.json()
     # amount is only updated if the address has history
@@ -183,16 +182,13 @@ async def api_update_address(address_id: str, req: Request):
 
 @watchonly_api_router.get("/api/v1/addresses/{wallet_id}")
 async def api_get_addresses(
-    wallet_id, key_info: WalletTypeInfo = Depends(require_invoice_key)
+    wallet_id: str,
+    auth: WatchOnlyAuth = Depends(require_watchonly_read_account),
 ) -> list[Address]:
-    wallet = await get_watch_wallet(wallet_id)
-    if not wallet:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail="Wallet does not exist."
-        )
+    await _get_user_watch_wallet(wallet_id, auth.user_id)
 
     addresses = await get_addresses(wallet_id)
-    config = await get_config(key_info.wallet.user)
+    config = await get_config(auth.user_id)
     assert config, "Config not found"
 
     if not addresses:
@@ -230,8 +226,11 @@ async def api_get_addresses(
     return await get_addresses(wallet_id)
 
 
-@watchonly_api_router.post("/api/v1/psbt", dependencies=[Depends(require_admin_key)])
-async def api_psbt_create(data: CreatePsbt):
+@watchonly_api_router.post("/api/v1/psbt")
+async def api_psbt_create(
+    data: CreatePsbt,
+    _auth: WatchOnlyAuth = Depends(require_watchonly_admin_account),
+):
     try:
         vin = [
             TransactionInput(bytes.fromhex(inp.tx_id), inp.vout) for inp in data.inputs
@@ -293,10 +292,11 @@ async def api_psbt_create(data: CreatePsbt):
         ) from exc
 
 
-@watchonly_api_router.put(
-    "/api/v1/psbt/utxos", dependencies=[Depends(require_admin_key)]
-)
-async def api_psbt_utxos_tx(req: Request):
+@watchonly_api_router.put("/api/v1/psbt/utxos")
+async def api_psbt_utxos_tx(
+    req: Request,
+    _auth: WatchOnlyAuth = Depends(require_watchonly_admin_account),
+):
     """Extract previous unspent transaction outputs (tx_id, vout) from PSBT"""
 
     body = await req.json()
@@ -313,10 +313,11 @@ async def api_psbt_utxos_tx(req: Request):
         ) from exc
 
 
-@watchonly_api_router.put(
-    "/api/v1/psbt/extract", dependencies=[Depends(require_admin_key)]
-)
-async def api_psbt_extract_tx(data: ExtractPsbt) -> SignedTransaction:
+@watchonly_api_router.put("/api/v1/psbt/extract")
+async def api_psbt_extract_tx(
+    data: ExtractPsbt,
+    _auth: WatchOnlyAuth = Depends(require_watchonly_admin_account),
+) -> SignedTransaction:
     network = NETWORKS["main"] if data.network == "Mainnet" else NETWORKS["test"]
     try:
         psbt = PSBT.from_base64(data.psbt_base64)
@@ -348,10 +349,11 @@ async def api_psbt_extract_tx(data: ExtractPsbt) -> SignedTransaction:
         ) from exc
 
 
-@watchonly_api_router.put(
-    "/api/v1/tx/extract", dependencies=[Depends(require_admin_key)]
-)
-async def api_extract_tx(data: ExtractTx):
+@watchonly_api_router.put("/api/v1/tx/extract")
+async def api_extract_tx(
+    data: ExtractTx,
+    _auth: WatchOnlyAuth = Depends(require_watchonly_admin_account),
+):
     network = NETWORKS["main"] if data.network == "Mainnet" else NETWORKS["test"]
     try:
         transaction = Transaction.from_string(data.tx_hex)
@@ -374,10 +376,11 @@ async def api_extract_tx(data: ExtractTx):
 
 @watchonly_api_router.post("/api/v1/tx")
 async def api_tx_broadcast(
-    data: SerializedTransaction, key_info: WalletTypeInfo = Depends(require_admin_key)
+    data: SerializedTransaction,
+    auth: WatchOnlyAuth = Depends(require_watchonly_admin_account),
 ):
     try:
-        config = await get_config(key_info.wallet.user)
+        config = await get_config(auth.user_id)
         if not config:
             raise ValueError(
                 "Cannot broadcast transaction. Mempool endpoint not defined!"
@@ -401,15 +404,32 @@ async def api_tx_broadcast(
 
 @watchonly_api_router.put("/api/v1/config")
 async def api_update_config(
-    data: Config, key_info: WalletTypeInfo = Depends(require_admin_key)
+    data: Config,
+    auth: WatchOnlyAuth = Depends(require_watchonly_admin_account),
 ) -> Config:
-    config = await update_config(data, user=key_info.wallet.user)
+    config = await update_config(data, user=auth.user_id)
     return config
 
 
 @watchonly_api_router.get("/api/v1/config")
 async def api_get_config(
-    key_info: WalletTypeInfo = Depends(require_invoice_key),
+    auth: WatchOnlyAuth = Depends(require_watchonly_read_account),
 ) -> Config:
-    config = await get_config(key_info.wallet.user)
+    config = await get_config(auth.user_id)
     return config
+
+
+async def _get_user_watch_wallet(wallet_id: str, user_id: str) -> WalletAccount:
+    watch_wallet = await get_watch_wallet(wallet_id)
+
+    if not watch_wallet:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Wallet does not exist."
+        )
+
+    if watch_wallet.user != user_id:
+        raise HTTPException(
+            status_code=HTTPStatus.FORBIDDEN, detail="Wallet does not belong to user."
+        )
+
+    return watch_wallet

@@ -1,12 +1,15 @@
-[tool.poetry]
-name = "lnbits-watchonly"
-version = "0.0.0"
+[project]
+name = "watchonly"
+version = "0.1.0"
 description = "LNbits, free and open-source Lightning wallet and accounts system."
-authors = ["Alan Bits <alan@lnbits.com>"]
+requires-python = ">=3.10,<3.13"
+authors = [{ name = "Alan Bits", email = "alan@lnbits.com" }]
+urls = { Homepage = "https://lnbits.com", Repository = "https://github.com/lnbits/lnbits" }
+dependencies = ["lnbits>=1.4"]
 
-[tool.poetry.dependencies]
-python = "^3.10 | ^3.9"
-lnbits = {version = "*", allow-prereleases = true}
+[tool.poetry]
+package-mode = false
+
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.3.0"
