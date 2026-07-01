@@ -1,5 +1,3 @@
-from typing import Optional
-
 from lnbits.db import Database
 from lnbits.helpers import urlsafe_short_hash
 
@@ -14,7 +12,7 @@ async def create_watch_wallet(wallet: WalletAccount) -> WalletAccount:
     return wallet
 
 
-async def get_watch_wallet(wallet_id: str) -> Optional[WalletAccount]:
+async def get_watch_wallet(wallet_id: str) -> WalletAccount | None:
     return await db.fetchone(
         "SELECT * FROM watchonly.wallets WHERE id = :id",
         {"id": wallet_id},
@@ -45,7 +43,7 @@ async def delete_watch_wallet(wallet_id: str) -> None:
     )
 
 
-async def get_fresh_address(wallet_id: str) -> Optional[Address]:
+async def get_fresh_address(wallet_id: str) -> Address | None:
     # todo: move logic to views_api after satspay refactoring
     wallet = await get_watch_wallet(wallet_id)
 
@@ -129,7 +127,7 @@ async def create_fresh_addresses(
     )
 
 
-async def get_address(address: str) -> Optional[Address]:
+async def get_address(address: str) -> Address | None:
     return await db.fetchone(
         "SELECT * FROM watchonly.addresses WHERE address = :address",
         {"address": address},
@@ -137,7 +135,7 @@ async def get_address(address: str) -> Optional[Address]:
     )
 
 
-async def get_address_by_id(address_id: str) -> Optional[Address]:
+async def get_address_by_id(address_id: str) -> Address | None:
     return await db.fetchone(
         "SELECT * FROM watchonly.addresses WHERE id = :id",
         {"id": address_id},
@@ -147,7 +145,7 @@ async def get_address_by_id(address_id: str) -> Optional[Address]:
 
 async def get_address_at_index(
     wallet_id: str, branch_index: int, address_index: int
-) -> Optional[Address]:
+) -> Address | None:
     return await db.fetchone(
         """
             SELECT * FROM watchonly.addresses
