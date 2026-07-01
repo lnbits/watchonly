@@ -1,5 +1,3 @@
-from typing import Optional, Tuple
-
 from embit.descriptor import Descriptor, Key
 from embit.descriptor.arguments import AllowedDerivation
 from embit.networks import NETWORKS
@@ -14,7 +12,7 @@ def detect_network(k):
             return net
 
 
-def parse_key(masterpub: str) -> Tuple[Descriptor, Optional[dict]]:
+def parse_key(masterpub: str) -> tuple[Descriptor, dict | None]:
     """Parses masterpub or descriptor and returns a tuple: (Descriptor, network)
     To create addresses use descriptor.derive(num).address(network=network)
     """

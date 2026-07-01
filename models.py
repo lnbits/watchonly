@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import Query
 from pydantic import BaseModel
 
@@ -19,7 +17,7 @@ class WalletAccount(BaseModel):
     title: str
     address_no: int
     balance: int
-    type: Optional[str] = ""
+    type: str | None = ""
     network: str = "Mainnet"
     meta: str = "{}"
 
@@ -31,7 +29,7 @@ class Address(BaseModel):
     amount: int = 0
     branch_index: int = 0
     address_index: int
-    note: Optional[str] = None
+    note: str | None = None
     has_activity: bool = False
 
 
@@ -49,9 +47,9 @@ class TransactionInput(BaseModel):
 class TransactionOutput(BaseModel):
     amount: int
     address: str
-    branch_index: Optional[int] = None
-    address_index: Optional[int] = None
-    wallet: Optional[str] = None
+    branch_index: int | None = None
+    address_index: int | None = None
+    wallet: str | None = None
 
 
 class MasterPublicKey(BaseModel):
@@ -84,8 +82,8 @@ class ExtractTx(BaseModel):
 
 
 class SignedTransaction(BaseModel):
-    tx_hex: Optional[str]
-    tx_json: Optional[str]
+    tx_hex: str | None
+    tx_json: str | None
 
 
 class Config(BaseModel):
