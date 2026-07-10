@@ -1,7 +1,6 @@
 window.app.component('address-list', {
   name: 'address-list',
   template: '#address-list',
-  delimiters: ['${', '}'],
   props: [
     'addresses',
     'accounts',

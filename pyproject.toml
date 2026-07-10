@@ -20,16 +20,6 @@ dev = [
 [tool.poetry]
 package-mode = false
 
-
-[tool.poetry.group.dev.dependencies]
-black = "^24.3.0"
-pytest-asyncio = "^0.21.0"
-pytest = "^7.3.2"
-mypy = "^1.5.1"
-pre-commit = "^3.2.2"
-ruff = "^0.3.2"
-
-
 [tool.mypy]
 exclude = "(nostr/*)"
 [[tool.mypy.overrides]]

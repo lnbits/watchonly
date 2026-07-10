@@ -1,7 +1,6 @@
 window.app.component('utxo-list', {
   name: 'utxo-list',
   template: '#utxo-list',
-  delimiters: ['${', '}'],
 
   props: [
     'utxos',

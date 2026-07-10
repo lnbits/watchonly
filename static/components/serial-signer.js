@@ -1,7 +1,6 @@
 window.app.component('serial-signer', {
   name: 'serial-signer',
   template: '#serial-signer',
-  delimiters: ['${', '}'],
 
   props: ['sats-denominated', 'network'],
   data: function () {
