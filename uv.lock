@@ -1716,6 +1716,18 @@ wheels = [
 ]
 
 [[package]]
+name = "pytest-md"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0e/55/1d4248f08a97255abb23b05d8ba07586333194fadb17beda96b707aebecd/pytest-md-0.2.0.tar.gz", hash = "sha256:3b248d5b360ea5198e05b4f49c7442234812809a63137ec6cdd3643a40cf0112", size = 5985, upload-time = "2019-07-11T08:15:59.687Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/80/71/23d03f57c18116c6770141478e33b3500c4e92500cf4b49a396e9226733f/pytest_md-0.2.0-py3-none-any.whl", hash = "sha256:4c4cd16fea6d1485e87ee254558712c804a96d2aa9674b780e7eb8fb6526e1d1", size = 6117, upload-time = "2019-07-11T08:15:57.829Z" },
+]
+
+[[package]]
 name = "python-crontab"
 version = "3.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2137,6 +2149,7 @@ dev = [
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "pytest-md" },
     { name = "ruff" },
 ]
 
@@ -2150,6 +2163,7 @@ dev = [
     { name = "pre-commit", specifier = ">=3.2.2,<4" },
     { name = "pytest", specifier = ">=7.3.2,<8" },
     { name = "pytest-asyncio", specifier = ">=0.21.0,<0.22" },
+    { name = "pytest-md" },
     { name = "ruff", specifier = ">=0.3.2,<0.4" },
 ]
 
