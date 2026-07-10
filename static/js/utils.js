@@ -32,9 +32,6 @@ const HWW_DEFAULT_CONFIG = Object.freeze({
   stopBits: 1
 })
 
-const blockTimeToDate = blockTime =>
-  blockTime ? moment(blockTime * 1000).format('LLL') : ''
-
 const currentDateTime = () => moment().format('LLL')
 
 const sleep = ms => new Promise(r => setTimeout(r, ms))

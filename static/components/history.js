@@ -41,10 +41,10 @@ window.app.component('history', {
           sortable: true
         },
         {
-          name: 'date',
+          name: 'height',
           align: 'left',
-          label: this.$t('watchonly.date'),
-          field: 'date',
+          label: this.$t('watchonly.block_height'),
+          field: 'height',
           sortable: true
         },
         {
@@ -60,8 +60,8 @@ window.app.component('history', {
           field: 'action'
         },
         {
-          label: this.$t('watchonly.date_time'),
-          field: 'date'
+          label: this.$t('watchonly.block_height'),
+          field: 'height'
         },
         {
           label: this.$t('watchonly.amount'),

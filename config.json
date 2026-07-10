@@ -2,8 +2,8 @@
   "name": "Onchain Wallet",
   "short_description": "Onchain watch only wallets",
   "tile": "/watchonly/static/bitcoin-wallet.png",
-  "version": "0.4.0",
-  "min_lnbits_version": "1.5.0",
+  "version": "0.5.0",
+  "min_lnbits_version": "1.6.0",
   "contributors": [
     {
       "name": "motorina0",

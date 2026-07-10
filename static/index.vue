@@ -609,7 +609,7 @@
             >
               <div v-text="satBtc(props.row.amount)"></div>
             </q-td>
-            <q-td key="date" :props="props" v-text="props.row.date"></q-td>
+            <q-td key="height" :props="props" v-text="props.row.height"></q-td>
             <q-td key="wallet" :props="props">
               <div v-text="getWalletName(props.row.wallet)"></div>
             </q-td>
@@ -1300,7 +1300,7 @@
               ...
             </q-badge>
           </q-td>
-          <q-td key="date" :props="props"> {{ props.row.date }} </q-td>
+          <q-td key="height" :props="props"> {{ props.row.height }} </q-td>
         </q-tr>
         <q-tr v-show="props.row.expanded" :props="props">
           <q-td colspan="100%">
