@@ -698,7 +698,7 @@
         dense
         :rows="walletAccounts"
         row-key="id"
-        :columns="walletsTable.columns"
+        :columns="walletsTableColumns"
         v-model:pagination="walletsTable.pagination"
         :filter="filter"
       >
@@ -994,7 +994,7 @@
       :rows="getFilteredAddresses()"
       row-key="id"
       virtual-scroll
-      :columns="addressesTable.columns"
+      :columns="addressesTableColumns"
       v-model:pagination="addressesTable.pagination"
       :filter="addressesTable.filter"
     >
@@ -1225,7 +1225,7 @@
       :rows="getFilteredAddressesHistory()"
       row-key="id"
       virtual-scroll
-      :columns="historyTable.columns"
+      :columns="historyTableColumns"
       :pagination.sync="historyTable.pagination"
       :filter="filter"
     >

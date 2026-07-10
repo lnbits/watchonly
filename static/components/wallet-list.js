@@ -62,36 +62,45 @@ window.app.component('wallet-list', {
       ],
 
       walletsTable: {
-        columns: [
-          {
-            name: 'new',
-            align: 'left',
-            label: ''
-          },
-          {
-            name: 'title',
-            align: 'left',
-            label: 'Title',
-            field: 'title'
-          },
-          {
-            name: 'amount',
-            align: 'left',
-            label: 'Amount'
-          },
-          {
-            name: 'type',
-            align: 'left',
-            label: 'Type',
-            field: 'type'
-          },
-          {name: 'id', align: 'left', label: 'ID', field: 'id'}
-        ],
         pagination: {
           rowsPerPage: 10
         },
         filter: ''
       }
+    }
+  },
+  computed: {
+    walletsTableColumns() {
+      return [
+        {
+          name: 'new',
+          align: 'left',
+          label: ''
+        },
+        {
+          name: 'title',
+          align: 'left',
+          label: this.$t('watchonly.title'),
+          field: 'title'
+        },
+        {
+          name: 'amount',
+          align: 'left',
+          label: this.$t('watchonly.amount')
+        },
+        {
+          name: 'type',
+          align: 'left',
+          label: this.$t('watchonly.type'),
+          field: 'type'
+        },
+        {
+          name: 'id',
+          align: 'left',
+          label: this.$t('watchonly.id_label'),
+          field: 'id'
+        }
+      ]
     }
   },
   watch: {

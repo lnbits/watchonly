@@ -6,69 +6,76 @@ window.app.component('history', {
   data: function () {
     return {
       historyTable: {
-        columns: [
-          {
-            name: 'expand',
-            align: 'left',
-            label: ''
-          },
-          {
-            name: 'status',
-            align: 'left',
-            label: 'Status'
-          },
-          {
-            name: 'amount',
-            align: 'left',
-            label: 'Amount',
-            field: 'amount',
-            sortable: true
-          },
-          {
-            name: 'address',
-            align: 'left',
-            label: 'Address',
-            field: 'address',
-            sortable: true
-          },
-          {
-            name: 'date',
-            align: 'left',
-            label: 'Date',
-            field: 'date',
-            sortable: true
-          },
-          {
-            name: 'txId',
-            field: 'txId'
-          }
-        ],
-        exportColums: [
-          {
-            label: 'Action',
-            field: 'action'
-          },
-          {
-            label: 'Date&Time',
-            field: 'date'
-          },
-          {
-            label: 'Amount',
-            field: 'amount'
-          },
-          {
-            label: 'Fee',
-            field: 'fee'
-          },
-          {
-            label: 'Transaction Id',
-            field: 'txId'
-          }
-        ],
         pagination: {
           rowsPerPage: 0
         }
       }
+    }
+  },
+
+  computed: {
+    historyTableColumns() {
+      return [
+        {
+          name: 'expand',
+          align: 'left',
+          label: ''
+        },
+        {
+          name: 'status',
+          align: 'left',
+          label: this.$t('watchonly.status')
+        },
+        {
+          name: 'amount',
+          align: 'left',
+          label: this.$t('watchonly.amount'),
+          field: 'amount',
+          sortable: true
+        },
+        {
+          name: 'address',
+          align: 'left',
+          label: this.$t('watchonly.address_label'),
+          field: 'address',
+          sortable: true
+        },
+        {
+          name: 'date',
+          align: 'left',
+          label: this.$t('watchonly.date'),
+          field: 'date',
+          sortable: true
+        },
+        {
+          name: 'txId',
+          field: 'txId'
+        }
+      ]
+    },
+    historyExportColumns() {
+      return [
+        {
+          label: this.$t('watchonly.action'),
+          field: 'action'
+        },
+        {
+          label: this.$t('watchonly.date_time'),
+          field: 'date'
+        },
+        {
+          label: this.$t('watchonly.amount'),
+          field: 'amount'
+        },
+        {
+          label: this.$t('watchonly.fee'),
+          field: 'fee'
+        },
+        {
+          label: this.$t('watchonly.transaction_id'),
+          field: 'txId'
+        }
+      ]
     }
   },
 
@@ -85,7 +92,7 @@ window.app.component('history', {
         action: a.sent ? 'Sent' : 'Received'
       }))
       LNbits.utils.exportCSV(
-        this.historyTable.exportColums,
+        this.historyExportColumns,
         history,
         'address-history'
       )
