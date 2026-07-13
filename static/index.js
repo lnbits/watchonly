@@ -1,7 +1,6 @@
 window.PageWatchonly = Vue.defineAsyncComponent(async () => {
   await Promise.all([
     LNbits.utils.loadScript('https://connect.trezor.io/9/trezor-connect.js'),
-    LNbits.utils.loadScript('https://mempool.space/mempool.js'),
     LNbits.utils.loadScript('/watchonly/static/js/tables.js'),
     LNbits.utils.loadScript('/watchonly/static/js/map.js'),
     LNbits.utils.loadScript('/watchonly/static/js/utils.js'),
@@ -141,18 +140,35 @@ window.PageWatchonly = Vue.defineAsyncComponent(async () => {
       },
 
       //################### ADDRESS HISTORY ###################
-      addressHistoryFromTxs: function (addressData, txs) {
+      addressHistoryFromTxs: function (addressData, txs, historyEntries = []) {
+        const txsByTxid = {}
+        txs.forEach(tx => {
+          txsByTxid[tx.txid] = tx
+        })
+        const metaByTxid = {}
+        historyEntries.forEach(h => {
+          metaByTxid[h.tx_hash] = h
+        })
+
         const addressHistory = []
         txs.forEach(tx => {
+          const meta = metaByTxid[tx.txid] || {}
+
           const sent = tx.vin
-            .filter(
-              vin => vin.prevout.scriptpubkey_address === addressData.address
-            )
-            .map(vin => mapInputToSentHistory(tx, addressData, vin))
+            .map(vin => {
+              const prevTx = txsByTxid[vin.txid]
+              const prevOut = prevTx && prevTx.vout.find(v => v.n === vin.vout)
+              return prevOut &&
+                prevOut.scriptPubKey.address === addressData.address
+                ? mapInputToSentHistory(tx, addressData, prevOut, meta)
+                : null
+            })
+            .filter(Boolean)
 
           const received = tx.vout
-            .filter(vout => vout.scriptpubkey_address === addressData.address)
-            .map(vout => mapOutputToReceiveHistory(tx, addressData, vout))
+            .filter(vout => vout.scriptPubKey.address === addressData.address)
+            .map(vout => mapOutputToReceiveHistory(tx, addressData, vout, meta))
+
           addressHistory.push(...sent, ...received)
         })
         return addressHistory
@@ -297,7 +313,7 @@ window.PageWatchonly = Vue.defineAsyncComponent(async () => {
 
         try {
           for (addrData of addresses) {
-            const addressHistory = await this.getAddressTxsDelayed(addrData)
+            const addressHistory = await this.getAddressHistoryDelayed(addrData)
             // remove old entries
             this.history = this.history.filter(
               h => h.address !== addrData.address
@@ -310,9 +326,7 @@ window.PageWatchonly = Vue.defineAsyncComponent(async () => {
 
             if (addressHistory.length) {
               // search only if it ever had any activity
-              const utxos = await this.getAddressTxsUtxoDelayed(
-                addrData.address
-              )
+              const utxos = await this.getAddressUtxosDelayed(addrData.address)
               this.updateUtxosForAddress(addrData, utxos)
             }
 
@@ -356,39 +370,38 @@ window.PageWatchonly = Vue.defineAsyncComponent(async () => {
         this.updateAmountForAddress(addressData, addressTotal)
       },
 
-      //################### MEMPOOL API ###################
-      getAddressTxsDelayed: async function (addrData) {
+      //################### BLOCKEXPLORER API ###################
+      getAddressHistoryDelayed: async function (addrData) {
         const accounts = this.walletAccounts
-        const {
-          bitcoin: {addresses: addressesAPI}
-        } = mempoolJS({
-          hostname: this.mempoolHostname
-        })
         const fn = async () => {
-          if (!accounts.find(w => w.id === addrData.wallet)) return []
-          return addressesAPI.getAddressTxs({
-            address: addrData.address
-          })
+          if (!accounts.find(w => w.id === addrData.wallet)) {
+            return {history: []}
+          }
+          const {data} = await LNbits.api.getBlockexplorerAddress(
+            addrData.address
+          )
+          if (data.history_error) throw new Error(data.history_error)
+          return data
         }
-        const addressTxs = await retryWithDelay(fn)
-        return this.addressHistoryFromTxs(addrData, addressTxs)
+        const {history} = await retryWithDelay(fn)
+        if (!history.length) return []
+
+        const txs = await Promise.all(
+          history.map(async h => {
+            const {data} = await LNbits.api.getBlockexplorerTransaction(
+              h.tx_hash
+            )
+            return data
+          })
+        )
+        return this.addressHistoryFromTxs(addrData, txs, history)
       },
 
-      getAddressTxsUtxoDelayed: async function (address) {
-        const endpoint = this.mempoolHostname
-        const {
-          bitcoin: {addresses: addressesAPI}
-        } = mempoolJS({
-          hostname: endpoint
+      getAddressUtxosDelayed: async function (address) {
+        return retryWithDelay(async () => {
+          const {data} = await LNbits.api.getBlockexplorerUtxos(address)
+          return data
         })
-
-        const fn = async () => {
-          if (endpoint !== this.mempoolHostname) return []
-          return addressesAPI.getAddressTxsUtxo({
-            address
-          })
-        }
-        return retryWithDelay(fn)
       },
 
       openQrCodeDialog: function (addressData) {

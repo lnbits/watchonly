@@ -66,10 +66,10 @@ window.app.component('utxo-list', {
           sortable: true
         },
         {
-          name: 'date',
+          name: 'height',
           align: 'left',
-          label: this.$t('watchonly.date'),
-          field: 'date',
+          label: this.$t('watchonly.block_height'),
+          field: 'height',
           sortable: true
         },
         {

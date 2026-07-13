@@ -10,29 +10,27 @@ const mapAddressesData = a => ({
   hasActivity: a.has_activity
 })
 
-const mapInputToSentHistory = (tx, addressData, vin) => ({
+const mapInputToSentHistory = (tx, addressData, prevOut, meta = {}) => ({
   sent: true,
   txId: tx.txid,
   address: addressData.address,
   isChange: addressData.isChange,
-  amount: vin.prevout.value,
-  date: blockTimeToDate(tx.status.block_time),
-  height: tx.status.block_height,
-  confirmed: tx.status.confirmed,
-  fee: tx.fee,
+  amount: Math.round(prevOut.value * 1e8),
+  height: meta.height,
+  confirmed: (meta.height || 0) > 0,
+  fee: meta.fee,
   expanded: false
 })
 
-const mapOutputToReceiveHistory = (tx, addressData, vout) => ({
+const mapOutputToReceiveHistory = (tx, addressData, vout, meta = {}) => ({
   received: true,
   txId: tx.txid,
   address: addressData.address,
   isChange: addressData.isChange,
-  amount: vout.value,
-  date: blockTimeToDate(tx.status.block_time),
-  height: tx.status.block_height,
-  confirmed: tx.status.confirmed,
-  fee: tx.fee,
+  amount: Math.round(vout.value * 1e8),
+  height: meta.height,
+  confirmed: (meta.height || 0) > 0,
+  fee: meta.fee,
   expanded: false
 })
 
@@ -58,12 +56,12 @@ const mapAddressDataToUtxo = (wallet, addressData, utxo) => ({
   accountType: addressData.accountType,
   accountPath: wallet.meta.accountPath,
   masterpubFingerprint: wallet.fingerprint,
-  txId: utxo.txid,
-  vout: utxo.vout,
-  confirmed: utxo.status.confirmed,
+  txId: utxo.tx_hash,
+  vout: utxo.tx_pos,
+  confirmed: utxo.height > 0,
   amount: utxo.value,
-  date: blockTimeToDate(utxo.status?.block_time),
-  sort: utxo.status?.block_time,
+  height: utxo.height,
+  sort: utxo.height,
   expanded: false,
   selected: false
 })
