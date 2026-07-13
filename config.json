@@ -1,6 +1,10 @@
 {
+  "id": "watchonly",
+  "version": "1.0.0",
   "name": "Onchain Wallet",
+  "repo": "https://github.com/lnbits/watchonly",
   "short_description": "Onchain watch only wallets",
+  "description": "",
   "tile": "/watchonly/static/bitcoin-wallet.png",
   "version": "0.4.0",
   "min_lnbits_version": "1.5.0",
@@ -23,8 +27,8 @@
   ],
   "images": [
     {
-      "uri": "https://raw.githubusercontent.com/lnbits/watchonly/main/static/1.jpg",
-      "link": "https://www.youtube.com/embed/Xx09tzeZIok?si=Ju9LjOfiZVPrlGGp"
+      "uri": "https://raw.githubusercontent.com/lnbits/watchonly/main/static/image/watchonly_thumbnail.png",
+      "link": "https://www.youtube.com/watch?v=Xx09tzeZIok"
     },
     {
       "uri": "https://raw.githubusercontent.com/lnbits/watchonly/main/static/1.png"
@@ -41,5 +45,9 @@
   ],
   "description_md": "https://raw.githubusercontent.com/lnbits/watchonly/main/description.md",
   "terms_and_conditions_md": "https://raw.githubusercontent.com/lnbits/watchonly/main/toc.md",
-  "license": "MIT"
+  "license": "MIT",
+  "paid_features": "",
+  "tags": ["Wallet", "Onchain", "xpub, ypub, zpub"],
+  "donate": "",
+  "hidden": false
 }
