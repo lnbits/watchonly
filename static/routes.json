@@ -1,0 +1,9 @@
+[
+  {
+    "path": "/watchonly/",
+    "name": "PageWatchonly",
+    "template": "/watchonly/static/index.vue",
+    "component": "/watchonly/static/index.js",
+    "i18n": "/watchonly/static/i18n"
+  }
+]

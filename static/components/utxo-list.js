@@ -1,7 +1,6 @@
 window.app.component('utxo-list', {
   name: 'utxo-list',
   template: '#utxo-list',
-  delimiters: ['${', '}'],
 
   props: [
     'utxos',
@@ -16,53 +15,6 @@ window.app.component('utxo-list', {
   data: function () {
     return {
       utxosTable: {
-        columns: [
-          {
-            name: 'expand',
-            align: 'left',
-            label: ''
-          },
-          {
-            name: 'selected',
-            align: 'left',
-            label: '',
-            selectable: true
-          },
-          {
-            name: 'status',
-            align: 'center',
-            label: 'Status',
-            sortable: true
-          },
-          {
-            name: 'address',
-            align: 'left',
-            label: 'Address',
-            field: 'address',
-            sortable: true
-          },
-          {
-            name: 'amount',
-            align: 'left',
-            label: 'Amount',
-            field: 'amount',
-            sortable: true
-          },
-          {
-            name: 'date',
-            align: 'left',
-            label: 'Date',
-            field: 'date',
-            sortable: true
-          },
-          {
-            name: 'wallet',
-            align: 'left',
-            label: 'Account',
-            field: 'wallet',
-            sortable: true
-          }
-        ],
         pagination: {
           rowsPerPage: 10
         }
@@ -80,8 +32,57 @@ window.app.component('utxo-list', {
   },
 
   computed: {
+    utxosTableColumns() {
+      return [
+        {
+          name: 'expand',
+          align: 'left',
+          label: ''
+        },
+        {
+          name: 'selected',
+          align: 'left',
+          label: '',
+          selectable: true
+        },
+        {
+          name: 'status',
+          align: 'center',
+          label: this.$t('watchonly.status'),
+          sortable: true
+        },
+        {
+          name: 'address',
+          align: 'left',
+          label: this.$t('watchonly.address_label'),
+          field: 'address',
+          sortable: true
+        },
+        {
+          name: 'amount',
+          align: 'left',
+          label: this.$t('watchonly.amount'),
+          field: 'amount',
+          sortable: true
+        },
+        {
+          name: 'date',
+          align: 'left',
+          label: this.$t('watchonly.date'),
+          field: 'date',
+          sortable: true
+        },
+        {
+          name: 'wallet',
+          align: 'left',
+          label: this.$t('watchonly.account'),
+          field: 'wallet',
+          sortable: true
+        }
+      ]
+    },
     columns: function () {
-      return this.utxosTable.columns.filter(c =>
+      return this.utxosTableColumns.filter(c =>
         c.selectable ? this.selectable : true
       )
     }

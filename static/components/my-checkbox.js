@@ -1,7 +1,6 @@
 window.app.component('my-checkbox', {
   name: 'my-checkbox',
   template: '#my-checkbox',
-  delimiters: ['${', '}'],
   data() {
     return {checked: false, title: 'Check me'}
   },
