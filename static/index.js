@@ -157,8 +157,7 @@ window.PageWatchonly = Vue.defineAsyncComponent(async () => {
           const sent = tx.vin
             .map(vin => {
               const prevTx = txsByTxid[vin.txid]
-              const prevOut =
-                prevTx && prevTx.vout.find(v => v.n === vin.vout)
+              const prevOut = prevTx && prevTx.vout.find(v => v.n === vin.vout)
               return prevOut &&
                 prevOut.scriptPubKey.address === addressData.address
                 ? mapInputToSentHistory(tx, addressData, prevOut, meta)
@@ -314,9 +313,7 @@ window.PageWatchonly = Vue.defineAsyncComponent(async () => {
 
         try {
           for (addrData of addresses) {
-            const addressHistory = await this.getAddressHistoryDelayed(
-              addrData
-            )
+            const addressHistory = await this.getAddressHistoryDelayed(addrData)
             // remove old entries
             this.history = this.history.filter(
               h => h.address !== addrData.address
