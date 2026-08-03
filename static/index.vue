@@ -2011,37 +2011,6 @@
           </q-item-section>
         </q-item>
         <q-item
-          v-for="device in pairedDevices"
-          :key="device.id"
-          v-if="!selectedPort && showPairedDevices"
-          clickable
-          v-close-popup
-        >
-          <q-item-section>
-            <q-item-label
-              @click="openSerialPortConfig(device.id)"
-              v-text="
-                $t('watchonly.paired_device', {
-                  name: device.config.name || 'no-name'
-                })
-              "
-            >
-            </q-item-label>
-            <q-item-label caption @click="openSerialPortConfig(device.id)"
-              >{{ device.id }}
-            </q-item-label>
-            <q-item-label caption @click="removePairedDevice(device.id)">
-              <q-btn
-                v-close-popup
-                flat
-                color="grey"
-                class="q-ml-auto"
-                v-text="$t('watchonly.forget')"
-              ></q-btn>
-            </q-item-label>
-          </q-item-section>
-        </q-item>
-        <q-item
           v-if="selectedPort"
           clickable
           v-close-popup

@@ -10,6 +10,7 @@ window.app.component('serial-signer', {
       writer: null,
       readableStreamClosed: null,
       reader: null,
+      closingSerialPort: false,
       receivedData: '',
       config: {},
       decryptionKey: null,
@@ -49,25 +50,7 @@ window.app.component('serial-signer', {
       },
       tx: null, // todo: move to hww
 
-      showConsole: false,
-      showPairedDevices: true
-    }
-  },
-
-  computed: {
-    pairedDevices: {
-      cache: false,
-      get: function () {
-        return (
-          JSON.parse(window.localStorage.getItem('lnbits-paired-devices')) || []
-        )
-      },
-      set: function (devices) {
-        window.localStorage.setItem(
-          'lnbits-paired-devices',
-          JSON.stringify(devices)
-        )
-      }
+      showConsole: false
     }
   },
 
@@ -98,6 +81,8 @@ window.app.component('serial-signer', {
 
         this.selectedPort.addEventListener('disconnect', () => {
           this.selectedPort = null
+          this.sharedSecret = null
+          this.decryptionKey = null
           this.hww.authenticated = false
           this.$q.notify({
             type: 'warning',
@@ -111,7 +96,7 @@ window.app.component('serial-signer', {
         // do not await
         this.startSerialPortReading()
         // wait to init
-        sleep(1000)
+        await sleep(1000)
 
         const textEncoder = new TextEncoderStream()
         this.writableStreamClosed = textEncoder.readable.pipeTo(
@@ -121,7 +106,6 @@ window.app.component('serial-signer', {
         this.writer = textEncoder.writable.getWriter()
 
         await this.hwwPing()
-        this.$emit('device:connected', 'usb-device')
 
         return true
       } catch (error) {
@@ -135,20 +119,16 @@ window.app.component('serial-signer', {
         return false
       }
     },
-    openSerialPortConfig: async function (deviceId) {
-      const device = this.getPairedDevice(deviceId)
-      if (device) {
-        this.config = device.config
-      } else {
-        this.config = {...HWW_DEFAULT_CONFIG}
-      }
+    openSerialPortConfig: async function () {
+      this.config = {...HWW_DEFAULT_CONFIG}
       this.hww.showConfigDialog = true
     },
     closeSerialPort: async function () {
+      this.closingSerialPort = true
       try {
-        if (this.writer) this.writer.close()
+        if (this.writer) await this.writer.close()
         if (this.writableStreamClosed) await this.writableStreamClosed
-        if (this.reader) this.reader.cancel()
+        if (this.reader) await this.reader.cancel()
         if (this.readableStreamClosed)
           await this.readableStreamClosed.catch(() => {
             /* Ignore the error */
@@ -168,7 +148,14 @@ window.app.component('serial-signer', {
         })
       } finally {
         this.selectedPort = null
+        this.writer = null
+        this.reader = null
+        this.writableStreamClosed = null
+        this.readableStreamClosed = null
+        this.sharedSecret = null
+        this.decryptionKey = null
         this.hww.authenticated = false
+        this.closingSerialPort = false
       }
     },
 
@@ -232,18 +219,21 @@ window.app.component('serial-signer', {
             const {value, done} = await readStringUntil('\n')
             if (value) {
               const {command, commandData} = await this.extractCommand(value)
-              this.handleSerialPortResponse(command, commandData)
+              await this.handleSerialPortResponse(command, commandData)
               this.updateSerialPortConsole(command)
             }
             if (done) return
           }
         } catch (error) {
-          this.$q.notify({
-            type: 'warning',
-            message: 'Serial port communication error!',
-            caption: `${error}`,
-            timeout: 10000
-          })
+          if (!this.closingSerialPort && this.selectedPort === port) {
+            this.$q.notify({
+              type: 'warning',
+              message: 'Serial port communication error!',
+              caption: `${error}`,
+              timeout: 10000
+            })
+          }
+          return
         }
       }
     },
@@ -252,10 +242,7 @@ window.app.component('serial-signer', {
 
       switch (command) {
         case COMMAND_PING:
-          this.handlePingResponse(commandData)
-          break
-        case COMMAND_CHECK_PAIRING:
-          this.handleCheckPairingResponse(commandData)
+          await this.handlePingResponse(commandData)
           break
         case COMMAND_SIGN_PSBT:
           this.handleSignResponse(commandData)
@@ -279,7 +266,7 @@ window.app.component('serial-signer', {
           this.handleShowSeedResponse(commandData)
           break
         case COMMAND_PAIR:
-          this.handlePairResponse(commandData)
+          await this.handlePairResponse(commandData)
           break
         case COMMAND_LOG:
           console.log(`   %c${commandData}`, 'background: #222; color: #bada55')
@@ -310,8 +297,6 @@ window.app.component('serial-signer', {
     },
     hwwPing: async function () {
       try {
-        // Send an empty ping. The serial port buffer might have some jubk data. Flush it.
-        await this.sendCommandClearText(COMMAND_PING)
         await this.sendCommandClearText(COMMAND_PING, [window.location.host])
       } catch (error) {
         this.$q.notify({
@@ -322,7 +307,7 @@ window.app.component('serial-signer', {
         })
       }
     },
-    handlePingResponse: function (res = '') {
+    handlePingResponse: async function (res = '') {
       const [status, deviceId] = res.split(' ')
       this.deviceId = deviceId
 
@@ -335,16 +320,7 @@ window.app.component('serial-signer', {
         return
       }
 
-      const device = this.getPairedDevice(deviceId)
-
-      if (device) {
-        this.sharedSecret = nobleSecp256k1.utils.hexToBytes(
-          device.sharedSecretHex
-        )
-        this.hwwCheckPairing()
-      } else {
-        this.hwwPair()
-      }
+      await this.hwwPair()
     },
     hwwShowPasswordDialog: async function () {
       try {
@@ -411,9 +387,6 @@ window.app.component('serial-signer', {
     },
     hwwConfigAndConnect: async function () {
       this.hww.showConfigDialog = false
-      if (this.config.deviceId) {
-        this.updatePairedDeviceConfig(this.config.deviceId, this.config)
-      }
       await this.openSerialPort(this.config)
       return true
     },
@@ -584,63 +557,6 @@ window.app.component('serial-signer', {
         timeout: 10000
       })
     },
-    hwwCheckPairing: async function () {
-      const iv = window.crypto.getRandomValues(new Uint8Array(16))
-      const encrypted = await this.encryptMessage(
-        this.sharedSecret, // todo: revisit
-        iv,
-        PAIRING_CONTROL_TEXT.length + ' ' + PAIRING_CONTROL_TEXT
-      )
-
-      const encryptedHex = nobleSecp256k1.utils.bytesToHex(encrypted)
-      const encryptedIvHex = nobleSecp256k1.utils.bytesToHex(iv)
-      try {
-        await this.sendCommandClearText(COMMAND_CHECK_PAIRING, [
-          encryptedHex + encryptedIvHex
-        ])
-      } catch (error) {
-        this.$q.notify({
-          type: 'warning',
-          message: 'Failed to check secure connection!',
-          caption: `${error}`,
-          timeout: 10000
-        })
-      }
-    },
-    handleCheckPairingResponse: async function (res = '') {
-      const [statusCode, message] = res.split(' ')
-      switch (statusCode) {
-        case '0':
-          const controlText = await this.decryptData(message)
-          if (controlText == PAIRING_CONTROL_TEXT) {
-            this.$q.notify({
-              type: 'positive',
-              message: 'Re-paired with success!',
-              timeout: 10000
-            })
-          } else {
-            this.$q.notify({
-              type: 'warning',
-              message: 'Re-pairing failed!',
-              caption: 'Remove (forget) device and try again!',
-              timeout: 10000
-            })
-          }
-          break
-        case '1':
-          this.closeSerialPort()
-          this.$q.notify({
-            type: 'warning',
-            message: 'Re-pairing failed. Remove (forget) device and try again!',
-            caption: `Error: ${message}`,
-            timeout: 10000
-          })
-          break
-        default:
-          // noting to do here yet
-          break
-      }
-    },
     hwwPair: async function () {
       try {
         this.decryptionKey = nobleSecp256k1.utils.randomPrivateKey()
@@ -680,9 +596,17 @@ window.app.component('serial-signer', {
           if (!data) errorMessage = 'Failed to exchange DH secret!'
           break
         case '1':
-          errorMessage =
-            'Device pairing only possible in the first 10 seconds after start-up!'
-          captionMessage = 'Restart and try again'
+          if (data === 'connection_period_expired') {
+            errorMessage =
+              'Device pairing only possible during the startup countdown!'
+            captionMessage = 'Restart the device and try again'
+          } else if (data === 'rng_failure') {
+            errorMessage = 'Device hardware RNG health check failed!'
+            captionMessage = 'Pairing was safely refused by the device'
+          } else {
+            errorMessage = 'Device refused pairing'
+            captionMessage = data || 'Unknown device error'
+          }
           break
 
         default:
@@ -718,12 +642,7 @@ window.app.component('serial-signer', {
       LNbits.utils
         .confirmDialog('Confirm code from display: ' + fingerprint)
         .onOk(() => {
-          this.addPairedDevice(
-            this.deviceId,
-            nobleSecp256k1.utils.bytesToHex(this.sharedSecret),
-            this.config
-          )
-
+          this.$emit('device:connected', 'usb-device')
           this.$q.notify({
             type: 'positive',
             message: 'Paired with device!',
@@ -899,8 +818,7 @@ window.app.component('serial-signer', {
         command === COMMAND_PAIR ||
         command === COMMAND_LOG ||
         command === COMMAND_PASSWORD_CLEAR ||
-        command === COMMAND_PING ||
-        command === COMMAND_CHECK_PAIRING
+        command === COMMAND_PING
       )
         return {command, commandData}
 
@@ -954,47 +872,9 @@ window.app.component('serial-signer', {
       const aesCbc = new aesjs.ModeOfOperation.cbc(key, iv)
       const decryptedBytes = aesCbc.decrypt(encryptedBytes)
       return decryptedBytes
-    },
-
-    getPairedDevice: function (deviceId) {
-      return this.pairedDevices.find(d => d.id === deviceId)
-    },
-    removePairedDevice: function (deviceId) {
-      const devices = this.pairedDevices
-      const deviceIndex = devices.findIndex(d => d.id === deviceId)
-      if (deviceIndex !== -1) {
-        devices.splice(deviceIndex, 1)
-      }
-      this.pairedDevices = devices
-      this.showPairedDevices = false
-      setTimeout(() => {
-        // force UI refresh
-        this.showPairedDevices = true
-      })
-    },
-    addPairedDevice: function (deviceId, sharedSecretHex, config) {
-      const devices = this.pairedDevices
-      config.deviceId = deviceId
-      devices.unshift({
-        id: deviceId,
-        sharedSecretHex: sharedSecretHex,
-        pairingDate: new Date().toISOString(),
-        config
-      })
-      this.pairedDevices = devices
-      this.showPairedDevices = false
-      setTimeout(() => {
-        // force UI refresh
-        this.showPairedDevices = true
-      })
-    },
-    updatePairedDeviceConfig(deviceId, config) {
-      const device = this.getPairedDevice(deviceId)
-      if (device) {
-        this.removePairedDevice(deviceId)
-        this.addPairedDevice(deviceId, device.sharedSecretHex, config)
-      }
     }
   },
-  created: async function () {}
+  created: async function () {
+    window.localStorage.removeItem('lnbits-paired-devices')
+  }
 })

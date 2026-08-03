@@ -15,10 +15,8 @@ const COMMAND_CANCEL = '/cancel'
 const COMMAND_XPUB = '/xpub'
 const COMMAND_PAIR = '/pair'
 const COMMAND_LOG = '/log'
-const COMMAND_CHECK_PAIRING = '/check-pairing'
 
 const DEFAULT_RECEIVE_GAP_LIMIT = 20
-const PAIRING_CONTROL_TEXT = 'lnbits'
 
 const HWW_DEFAULT_CONFIG = Object.freeze({
   name: '',
@@ -137,7 +135,8 @@ const readFromSerialPort = reader => {
   let fulliness = []
 
   const readStringUntil = async (separator = '\n') => {
-    if (fulliness.length) return fulliness.shift().trim()
+    if (fulliness.length)
+      return {value: fulliness.shift().trim(), done: false}
     const chunks = []
     if (partialChunk) {
       // leftovers from previous read
