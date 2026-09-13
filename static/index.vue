@@ -2651,28 +2651,6 @@
         ></q-input>
       </div>
     </div>
-
-    <q-separator class="q-mt-sm"></q-separator>
-    <div class="row q-mt-md">
-      <div class="col-12">
-        <q-input
-          filled
-          dense
-          v-model.trim="config.buttonOnePin"
-          :label="$t('watchonly.pin_number_button_1')"
-        ></q-input>
-      </div>
-    </div>
-    <div class="row q-mt-md">
-      <div class="col-12">
-        <q-input
-          filled
-          dense
-          v-model.trim="config.buttonTwoPin"
-          :label="$t('watchonly.pin_number_button_2')"
-        ></q-input>
-      </div>
-    </div>
   </div>
 </template>
 

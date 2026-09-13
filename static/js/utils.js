@@ -25,8 +25,6 @@ const DEFAULT_RECEIVE_GAP_LIMIT = 20
 
 const HWW_DEFAULT_CONFIG = Object.freeze({
   name: '',
-  buttonOnePin: '',
-  buttonTwoPin: '',
   baudRate: 9600,
   bufferSize: 255,
   dataBits: 8,

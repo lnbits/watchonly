@@ -562,14 +562,7 @@ window.app.component('serial-signer', {
         )
         const publicKeyHex = publicKey.toHex().slice(2)
 
-        const args = [publicKeyHex]
-        if (Number.isInteger(+this.config.buttonOnePin)) {
-          args.push(this.config.buttonOnePin)
-        }
-        if (Number.isInteger(+this.config.buttonTwoPin)) {
-          args.push(this.config.buttonTwoPin)
-        }
-        await this.sendCommandClearText(COMMAND_PAIR, args)
+        await this.sendCommandClearText(COMMAND_PAIR, [publicKeyHex])
         this.$q.notify({
           type: 'positive',
           message: 'Pairing started!',
