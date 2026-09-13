@@ -2113,7 +2113,12 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="hww.showPasswordDialog" position="top">
+    <q-dialog
+      v-model="hww.showPasswordDialog"
+      :persistent="hww.loggingIn"
+      @hide="passwordDialogClosed"
+      position="top"
+    >
       <q-card class="q-pa-lg q-pt-xl lnbits__dialog-card">
         <q-form @submit="hwwLogin" class="q-gutter-md">
           <span v-text="$t('watchonly.enter_password_hww_full')"></span>
@@ -2155,11 +2160,13 @@
               unelevated
               color="primary"
               :disable="!selectedPort"
+              :loading="hww.loggingIn"
               type="submit"
               v-text="$t('watchonly.login')"
             ></q-btn>
             <q-btn
               v-close-popup
+              :disable="hww.loggingIn"
               flat
               color="grey"
               class="q-ml-auto"
@@ -2170,14 +2177,16 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="hww.showConfirmationDialog" position="top">
+    <q-dialog v-model="hww.showConfirmationDialog" persistent position="top">
       <q-card class="q-pa-lg q-pt-xl lnbits__dialog-card">
-        <q-form @submit="hwwSignPsbt" class="q-gutter-md">
-          <div v-if="tx">
+        <div class="q-gutter-md">
+          <div
+            v-if="tx && ['output', 'fee', 'sign'].includes(hww.confirm.stage)"
+          >
             <div v-if="!hww.confirm.showFee" class="row q-mt-lg">
               <div class="col-12">
                 <span class="text-subtitle2"
-                  >Output {{ hww.confirm.outputIndex }}</span
+                  >Output {{ hww.confirm.outputIndex + 1 }}</span
                 >
                 <q-badge
                   v-if="tx.outputs[hww.confirm.outputIndex].branch_index === 1"
@@ -2193,7 +2202,9 @@
                 <span v-text="$t('watchonly.address_colon')"></span>
               </div>
               <div class="col-9">
-                <span>{{ tx.outputs[hww.confirm.outputIndex].address }}</span>
+                <span class="text-wrap">{{
+                  tx.outputs[hww.confirm.outputIndex].address
+                }}</span>
               </div>
             </div>
             <div v-if="!hww.confirm.showFee" class="row q-mt-lg">
@@ -2226,47 +2237,19 @@
           <div class="row q-mt-lg">
             <div class="col-12">
               <q-badge class="text-subtitle2" color="yellow" text-color="black">
-                <span v-text="$t('watchonly.confirm_check_device')"></span>
+                <span v-text="$t('watchonly.bowser_review_on_device')"></span>
               </q-badge>
             </div>
           </div>
-          <div class="row q-mt-lg">
-            <div class="col-6">
-              <q-btn
-                v-if="hww.confirm.showFee"
-                unelevated
-                color="primary"
-                :disable="!selectedPort"
-                type="submit"
-                class="float-left"
-                :label="$t('watchonly.confirm')"
-              >
-                <q-spinner v-if="hww.signingPsbt" color="primary"></q-spinner>
-              </q-btn>
-            </div>
-            <div class="col-3">
-              <q-btn
-                unelevated
-                color="secondary"
-                :label="$t('watchonly.next')"
-                class="float-left"
-                v-if="!hww.confirm.showFee"
-                @click="hwwConfirmNext"
-              >
-              </q-btn>
-            </div>
-            <div class="col-3">
-              <q-btn
-                @click="cancelOperation"
-                v-close-popup
-                flat
-                color="grey"
-                class="float-right"
-                v-text="$t('watchonly.cancel')"
-              ></q-btn>
-            </div>
+          <div class="row items-center q-gutter-sm q-mt-lg" role="status">
+            <q-spinner color="primary"></q-spinner>
+            <span>{{
+              hww.confirm.stage === 'transfer'
+                ? $t('watchonly.bowser_transfer')
+                : $t('watchonly.bowser_physical_review')
+            }}</span>
           </div>
-        </q-form>
+        </div>
       </q-card>
     </q-dialog>
 
@@ -2400,20 +2383,7 @@
             })
           "
         ></span>
-        <div class="row q-mt-lg">
-          <div class="col-12">
-            <q-toggle
-              :label="$t('watchonly.show_seed_word')"
-              color="primary"
-              v-model="hww.showSeedWord"
-            ></q-toggle>
-          </div>
-        </div>
-        <div v-if="hww.showSeedWord" class="row q-mt-lg">
-          <div class="col-12">
-            <q-input readonly v-model.trim="hww.seedWord"></q-input>
-          </div>
-        </div>
+        <p class="q-mt-lg" v-text="$t('watchonly.bowser_seed_display')"></p>
 
         <div class="row q-mt-lg">
           <div class="col-4">

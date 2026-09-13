@@ -2,11 +2,9 @@ import json
 from http import HTTPStatus
 
 import httpx
-from embit import finalizer, script
-from embit.ec import PublicKey
 from embit.networks import NETWORKS
-from embit.psbt import PSBT, DerivationPath
-from embit.transaction import Transaction, TransactionInput, TransactionOutput
+from embit.psbt import PSBT
+from embit.transaction import Transaction
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from lnbits.helpers import urlsafe_short_hash
 
@@ -42,6 +40,7 @@ from .models import (
     SignedTransaction,
     WalletAccount,
 )
+from .psbt import create_psbt, finalize_signed_psbt
 
 watchonly_api_router = APIRouter()
 
@@ -232,59 +231,7 @@ async def api_psbt_create(
     _auth: WatchOnlyAuth = Depends(require_watchonly_admin_account),
 ):
     try:
-        vin = [
-            TransactionInput(bytes.fromhex(inp.tx_id), inp.vout) for inp in data.inputs
-        ]
-        vout = [
-            TransactionOutput(out.amount, script.address_to_scriptpubkey(out.address))
-            for out in data.outputs
-        ]
-
-        descriptors = {}
-        for _, masterpub in enumerate(data.masterpubs):
-            descriptors[masterpub.id] = parse_key(masterpub.public_key)
-
-        inputs_extra: list[dict] = []
-
-        for inp in data.inputs:
-            bip32_derivations = {}
-            descriptor = descriptors[inp.wallet][0]
-            d = descriptor.derive(inp.address_index, inp.branch_index)
-            for k in d.keys:
-                bip32_derivations[PublicKey.parse(k.sec())] = DerivationPath(
-                    k.origin.fingerprint, k.origin.derivation
-                )
-            inputs_extra.append(
-                {
-                    "bip32_derivations": bip32_derivations,
-                    "non_witness_utxo": Transaction.from_string(inp.tx_hex),
-                }
-            )
-
-        tx = Transaction(vin=vin, vout=vout)
-        psbt = PSBT(tx)
-
-        for i, inp_extra in enumerate(inputs_extra):
-            psbt.inputs[i].bip32_derivations = inp_extra["bip32_derivations"]
-            psbt.inputs[i].non_witness_utxo = inp_extra.get("non_witness_utxo", None)
-
-        outputs_extra = []
-        bip32_derivations = {}
-        for out in data.outputs:
-            if out.branch_index == 1:
-                assert out.wallet
-                descriptor = descriptors[out.wallet][0]
-                d = descriptor.derive(out.address_index, out.branch_index)
-                for k in d.keys:
-                    bip32_derivations[PublicKey.parse(k.sec())] = DerivationPath(
-                        k.origin.fingerprint, k.origin.derivation
-                    )
-                outputs_extra.append({"bip32_derivations": bip32_derivations})
-
-        for i, out_extra in enumerate(outputs_extra):
-            psbt.outputs[i].bip32_derivations = out_extra["bip32_derivations"]
-
-        return psbt.to_string()
+        return create_psbt(data).to_string()
 
     except Exception as exc:
         raise HTTPException(
@@ -324,7 +271,7 @@ async def api_psbt_extract_tx(
         for i, inp in enumerate(data.inputs):
             psbt.inputs[i].non_witness_utxo = Transaction.from_string(inp.tx_hex)
 
-        final_psbt = finalizer.finalize_psbt(psbt)
+        final_psbt = finalize_signed_psbt(psbt)
         if not final_psbt:
             raise ValueError("PSBT cannot be finalized!")
 

@@ -88,6 +88,14 @@ You can now use this wallet on the LNbits [SatsPayServer](https://github.com/lnb
 - a confirmation will be shown for each Output and for the Fee
 - after the user confirms the addresses and amounts, the transaction will be signed on the Hardware Device
 
+Bowser Wallet uses the chunked `/psbt-begin`, `/psbt-chunk`, and `/psbt-commit`
+protocol. Use current Bowser firmware; older firmware without these commands
+must be upgraded. Approve or reject each output, the fee, and final signing on
+the hardware itself. Watchonly mirrors the device's review progress. Bowser
+accepts at most 64 inputs, 64 outputs, and 16,384 base64 characters per PSBT.
+Legacy, native SegWit, wrapped SegWit, and BIP86 Taproot accounts are supported.
+Trezor continues to use its native Trezor Connect signing flow.
+
 ### Share PSBT
 
 - Show the PSBT without sending it to the Hardware Wallet

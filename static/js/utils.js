@@ -5,6 +5,11 @@ const COMMAND_PASSWORD = '/password'
 const COMMAND_PASSWORD_CLEAR = '/password-clear'
 const COMMAND_ADDRESS = '/address'
 const COMMAND_SEND_PSBT = '/psbt'
+const COMMAND_PSBT_BEGIN = '/psbt-begin'
+const COMMAND_PSBT_CHUNK = '/psbt-chunk'
+const COMMAND_PSBT_COMMIT = '/psbt-commit'
+const COMMAND_PSBT_REVIEW = '/psbt-review'
+const COMMAND_NEW = '/new'
 const COMMAND_SIGN_PSBT = '/sign'
 const COMMAND_HELP = '/help'
 const COMMAND_WIPE = '/wipe'
@@ -135,8 +140,7 @@ const readFromSerialPort = reader => {
   let fulliness = []
 
   const readStringUntil = async (separator = '\n') => {
-    if (fulliness.length)
-      return {value: fulliness.shift().trim(), done: false}
+    if (fulliness.length) return {value: fulliness.shift().trim(), done: false}
     const chunks = []
     if (partialChunk) {
       // leftovers from previous read

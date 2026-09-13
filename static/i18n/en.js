@@ -1,5 +1,10 @@
 window.i18n.global.mergeLocaleMessage('en', {
   watchonly: {
+    bowser_transfer: 'Transferring PSBT to Bowser Wallet',
+    bowser_physical_review:
+      'Waiting for approval or rejection on Bowser Wallet',
+    bowser_seed_display: 'Seed words are shown only on the hardware display.',
+    bowser_review_on_device: 'Review on the hardware display',
     scan_blockchain: 'Scan Blockchain',
     new_payment: 'New Payment',
     new_payment_desc: 'Create a new payment by selecting Inputs and Outputs',
