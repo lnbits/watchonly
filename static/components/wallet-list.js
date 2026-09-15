@@ -195,11 +195,11 @@ window.app.component('wallet-list', {
         })
     },
 
-    getWatchOnlyWallets: async function () {
+    getWatchOnlyWallets: async function (network = this.network) {
       try {
         const {data} = await LNbits.api.request(
           'GET',
-          `/watchonly/api/v1/wallet?network=${this.network}`,
+          `/watchonly/api/v1/wallet?network=${network}`,
           this.inkey
         )
         return data
@@ -214,8 +214,10 @@ window.app.component('wallet-list', {
       return []
     },
     refreshWalletAccounts: async function () {
+      const network = this.network
       this.walletAccounts = []
-      const wallets = await this.getWatchOnlyWallets()
+      const wallets = await this.getWatchOnlyWallets(network)
+      if (network !== this.network) return
       this.walletAccounts = wallets.map(w => mapWalletAccount(w))
       this.$emit('accounts-update', this.walletAccounts)
     },
@@ -290,7 +292,7 @@ window.app.component('wallet-list', {
     handleAddressTypeChanged: function (value = {}) {
       const addressType =
         this.addressTypeOptions.find(t => t.id === value.id) || {}
-      this.accountPath = addressType[`path${this.network}`]
+      this.accountPath = addressType[`path${getSigningNetwork(this.network)}`]
     },
     // todo: bad. base.js not present in custom components
     copyText: function (text, message, position) {

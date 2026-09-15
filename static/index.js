@@ -78,6 +78,8 @@ window.PageWatchonly = Vue.defineAsyncComponent(async () => {
         let hostname = new URL(this.config.mempool_endpoint).hostname
         if (this.config.network === 'Testnet') {
           hostname += '/testnet'
+        } else if (this.config.network === 'Testnet4') {
+          hostname += '/testnet4'
         }
         return hostname
       },
@@ -86,6 +88,17 @@ window.PageWatchonly = Vue.defineAsyncComponent(async () => {
           return this.$refs.trezorSigner
         }
         return this.$refs.serialSigner
+      }
+    },
+
+    watch: {
+      'config.network': function () {
+        this.scan = {scanning: false, scanCount: 0, scanIndex: 0}
+        this.walletAccounts = []
+        this.addresses = []
+        this.history = []
+        this.utxos.data = []
+        this.utxos.total = 0
       }
     },
 
@@ -209,7 +222,9 @@ window.PageWatchonly = Vue.defineAsyncComponent(async () => {
 
       //################### UTXOs ###################
       scanAllAddresses: async function () {
+        const network = this.config.network
         await this.refreshAddresses()
+        if (network !== this.config.network) return
         this.history = []
         let addresses = this.addresses
         this.utxos.data = []
@@ -217,9 +232,11 @@ window.PageWatchonly = Vue.defineAsyncComponent(async () => {
         // Loop while new funds are found on the gap adresses.
         // Use 1000 limit as a safety check (scan 20 000 addresses max)
         for (let i = 0; i < 1000 && addresses.length; i++) {
-          await this.updateUtxosForAddresses(addresses)
+          if (!(await this.updateUtxosForAddresses(addresses))) return
+          if (network !== this.config.network) return
           const oldAddresses = this.addresses.slice()
           await this.refreshAddresses()
+          if (network !== this.config.network) return
           const newAddresses = this.addresses.slice()
           // check if gap addresses have been extended
           addresses = newAddresses.filter(
@@ -251,11 +268,18 @@ window.PageWatchonly = Vue.defineAsyncComponent(async () => {
       },
       refreshAddresses: async function () {
         if (!this.walletAccounts) return
-        this.addresses = []
-        for (const {id, type} of this.walletAccounts) {
+        const accounts = this.walletAccounts
+        const network = this.config.network
+        const addresses = []
+        for (const {id, type} of accounts) {
           const newAddresses = await this.getAddressesForWallet(id)
+          if (
+            accounts !== this.walletAccounts ||
+            network !== this.config.network
+          )
+            return
           const uniqueAddresses = newAddresses.filter(
-            newAddr => !this.addresses.find(a => a.address === newAddr.address)
+            newAddr => !addresses.find(a => a.address === newAddr.address)
           )
 
           const lastActiveAddress =
@@ -270,8 +294,9 @@ window.PageWatchonly = Vue.defineAsyncComponent(async () => {
               a.addressIndex >
                 lastActiveAddress.addressIndex + DEFAULT_RECEIVE_GAP_LIMIT
           })
-          this.addresses.push(...uniqueAddresses)
+          addresses.push(...uniqueAddresses)
         }
+        this.addresses = addresses
         this.$emit('update:addresses', this.addresses)
       },
       getAddressesForWallet: async function (walletId) {
@@ -294,10 +319,15 @@ window.PageWatchonly = Vue.defineAsyncComponent(async () => {
       },
       updateUtxosForAddresses: async function (addresses = []) {
         this.scan = {scanning: true, scanCount: addresses.length, scanIndex: 0}
+        const scan = this.scan
+        const network = this.config.network
+        const isCurrent = () =>
+          this.scan === scan && this.config.network === network
 
         try {
-          for (addrData of addresses) {
+          for (const addrData of addresses) {
             const addressHistory = await this.getAddressTxsDelayed(addrData)
+            if (!isCurrent()) return false
             // remove old entries
             this.history = this.history.filter(
               h => h.address !== addrData.address
@@ -313,20 +343,24 @@ window.PageWatchonly = Vue.defineAsyncComponent(async () => {
               const utxos = await this.getAddressTxsUtxoDelayed(
                 addrData.address
               )
+              if (!isCurrent()) return false
               this.updateUtxosForAddress(addrData, utxos)
             }
 
             this.scan.scanIndex++
           }
+          return true
         } catch (error) {
+          if (!isCurrent()) return false
           console.error(error)
           this.$q.notify({
             type: 'warning',
             message: 'Failed to scan addresses',
             timeout: 10000
           })
+          return false
         } finally {
-          this.scan.scanning = false
+          if (isCurrent()) this.scan.scanning = false
         }
       },
       updateUtxosForAddress: function (addressData, utxos = []) {
@@ -359,12 +393,14 @@ window.PageWatchonly = Vue.defineAsyncComponent(async () => {
       //################### MEMPOOL API ###################
       getAddressTxsDelayed: async function (addrData) {
         const accounts = this.walletAccounts
+        const endpoint = this.mempoolHostname
         const {
           bitcoin: {addresses: addressesAPI}
         } = mempoolJS({
-          hostname: this.mempoolHostname
+          hostname: endpoint
         })
         const fn = async () => {
+          if (endpoint !== this.mempoolHostname) return []
           if (!accounts.find(w => w.id === addrData.wallet)) return []
           return addressesAPI.getAddressTxs({
             address: addrData.address

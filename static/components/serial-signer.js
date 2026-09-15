@@ -264,6 +264,9 @@ window.app.component('serial-signer', {
         case COMMAND_WIPE:
           this.handleWipeResponse(commandData)
           break
+        case COMMAND_RESTORE:
+          this.handleRestoreResponse(commandData)
+          break
         case COMMAND_SEED:
           this.handleShowSeedResponse(commandData)
           break
@@ -449,7 +452,7 @@ window.app.component('serial-signer', {
     hwwShowAddress: async function (path, address) {
       try {
         await this.sendCommandSecure(COMMAND_ADDRESS, [
-          this.network,
+          getSigningNetwork(this.network),
           path,
           address
         ])
@@ -490,7 +493,7 @@ window.app.component('serial-signer', {
         this.hww.showConfirmationDialog = true
         const count = Math.ceil(psbtBase64.length / 64)
         const started = await this.requestCommand(COMMAND_PSBT_BEGIN, [
-          this.network,
+          getSigningNetwork(this.network),
           psbtBase64.length
         ])
         if (started !== `1 ${count}`)
@@ -679,7 +682,9 @@ window.app.component('serial-signer', {
     },
     handleWipeResponse: function (res = '') {
       const wiped = res.trim() === '1'
+      this.hww.authenticated = wiped
       if (wiped) {
+        this.xpubData = {}
         this.$q.notify({
           type: 'positive',
           message: 'Wallet wiped!',
@@ -689,14 +694,16 @@ window.app.component('serial-signer', {
         this.$q.notify({
           type: 'warning',
           message: 'Failed to wipe wallet!',
-          caption: `${error}`,
           timeout: 10000
         })
       }
     },
     hwwXpub: async function (path) {
       this.xpubData = {}
-      const res = await this.requestCommand(COMMAND_XPUB, [this.network, path])
+      const res = await this.requestCommand(COMMAND_XPUB, [
+        getSigningNetwork(this.network),
+        path
+      ])
       const args = res.trim().split(' ')
       if (args.length < 3 || args[0].trim() !== '1') {
         throw new Error(`Failed to fetch XPub: ${res}`)
@@ -762,6 +769,17 @@ window.app.component('serial-signer', {
         this.hww.confirmedPassword = null
         this.hww.showPassword = false
       }
+    },
+
+    handleRestoreResponse: function (res = '') {
+      const restored = res.trim() === '1'
+      this.hww.authenticated = restored
+      if (restored) this.xpubData = {}
+      this.$q.notify({
+        type: restored ? 'positive' : 'warning',
+        message: restored ? 'Wallet restored!' : 'Failed to restore wallet!',
+        timeout: 10000
+      })
     },
 
     updateSignedPsbt: async function (value) {

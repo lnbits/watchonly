@@ -69,7 +69,8 @@ async def api_wallet_create_or_update(
     try:
         descriptor, network = parse_key(data.masterpub)
         assert network
-        if data.network != network["name"]:
+        signing_network = "Testnet" if data.network == "Testnet4" else data.network
+        if signing_network != network["name"]:
             raise ValueError(
                 "Account network error.  This account is for '{}'".format(
                     network["name"]
@@ -85,11 +86,11 @@ async def api_wallet_create_or_update(
             title=data.title,
             address_no=-1,  # fresh address on empty wallet can get address with index 0
             balance=0,
-            network=network["name"],
+            network=data.network,
             meta=data.meta,
         )
 
-        wallets = await get_watch_wallets(auth.user_id, network["name"])
+        wallets = await get_watch_wallets(auth.user_id, data.network)
         existing_wallet = next(
             (
                 ew
@@ -333,11 +334,8 @@ async def api_tx_broadcast(
                 "Cannot broadcast transaction. Mempool endpoint not defined!"
             )
 
-        endpoint = (
-            config.mempool_endpoint
-            if config.network == "Mainnet"
-            else config.mempool_endpoint + "/testnet"
-        )
+        network_path = {"Mainnet": "", "Testnet": "/testnet", "Testnet4": "/testnet4"}
+        endpoint = config.mempool_endpoint.rstrip("/") + network_path[config.network]
         async with httpx.AsyncClient() as client:
             r = await client.post(endpoint + "/api/tx", content=data.tx_hex)
             r.raise_for_status()

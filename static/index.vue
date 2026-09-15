@@ -448,6 +448,7 @@
             dense
             emit-value
             v-model="config.network"
+            map-options
             :options="networkOptions"
             :label="$t('watchonly.network')"
           ></q-select>

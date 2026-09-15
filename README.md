@@ -36,6 +36,14 @@ You can now use this wallet on the LNbits [SatsPayServer](https://github.com/lnb
 
 ### Scan Blockchain
 
+Select `Testnet4` in settings to use mempool.space's Testnet4 API for scanning,
+fees, explorer links, and broadcasting. Keep the Mempool Endpoint set to
+`https://mempool.space`; the network path is added automatically. `Testnet3`
+remains available for existing accounts. Accounts and cached balances are kept
+separate per network, so add your test-network public key or hardware account
+again after switching to Testnet4, then run Scan Blockchain. Testnet3 coins do
+not carry over to Testnet4. No seed export or firmware update is needed.
+
 - when the user clicks `Scan Blockchain`, the wallet will loop over the all addresses (for each account)
   - if funds are found, then the list is extended
   - will scan addresses for all wallet accounts

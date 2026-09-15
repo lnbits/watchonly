@@ -72,6 +72,63 @@ const transaction = () => ({
   feeRate: 2
 })
 
+for (const [command, method] of [
+  ['/wipe', 'hwwWipe'],
+  ['/restore', 'hwwRestore']
+]) {
+  test(`Bowser ${command} success unlocks seed viewing on the existing connection`, async () => {
+    const {instance: signer} = harness()
+    const port = {}
+    const writer = {}
+    const reader = {}
+    const sharedSecret = new Uint8Array(32).fill(1)
+    const privateKey = new Uint8Array(32).fill(2)
+    Object.assign(signer, {
+      selectedPort: port,
+      writer,
+      reader,
+      sharedSecret,
+      decryptionKey: privateKey,
+      xpubData: {xpub: 'previous-wallet'}
+    })
+    const commands = []
+    signer.sendCommandSecure = async (name, args) => commands.push([name, args])
+    signer.hww.password = 'test-password'
+    signer.hww.mnemonic = 'test mnemonic'
+    await signer[method]()
+    assert.equal(commands[0][0], command)
+    assert.equal(signer.isAuthenticated(), false)
+    await signer.handleSerialPortResponse(command, '1')
+    assert.equal(signer.isAuthenticated(), true)
+    assert.equal(signer.selectedPort, port)
+    assert.equal(signer.writer, writer)
+    assert.equal(signer.reader, reader)
+    assert.equal(signer.sharedSecret, sharedSecret)
+    assert.equal(signer.decryptionKey, privateKey)
+    assert.deepEqual(Object.keys(signer.xpubData), [])
+    await signer.hwwShowSeed()
+    assert.equal(signer.hww.showSeedDialog, true)
+    assert.equal(commands[1][0], '/seed')
+    assert.equal(commands[1][1][0], 1)
+    assert.equal(commands.length, 2)
+  })
+
+  test(`Bowser ${command} failure locks the UI without breaking response handling`, async () => {
+    const {instance: signer} = harness()
+    const port = {}
+    signer.selectedPort = port
+    signer.hww.authenticated = true
+    const notifications = []
+    signer.$q.notify = message => notifications.push(message)
+    await signer.handleSerialPortResponse(command, '0')
+    assert.equal(signer.isAuthenticated(), false)
+    assert.equal(signer.selectedPort, port)
+    assert.equal(notifications[0].type, 'warning')
+    await signer.handleSerialPortResponse('/password', '1')
+    assert.equal(signer.isAuthenticated(), true)
+  })
+}
+
 test('Bowser uploads acknowledged chunks and signs only after physical review', async () => {
   const {instance: signer, events} = harness()
   signer.hww.authenticated = true
@@ -250,7 +307,33 @@ test('Bowser keeps seed acknowledgements on-device and omits response data from 
   assert.ok(!JSON.stringify(logs).includes('private test payload'))
 })
 
-for (const network of ['Mainnet', 'Testnet']) {
+test('Bowser Testnet4 uses the existing Testnet hardware protocol', async () => {
+  const {instance: signer} = harness()
+  signer.network = 'Testnet4'
+  signer.hww.authenticated = true
+  const commands = []
+  signer.sendCommandSecure = async (command, args) => {
+    commands.push([command, args])
+  }
+  signer.requestCommand = async (command, args) => {
+    commands.push([command, args])
+    return {
+      '/xpub': '1 tpubExample 00112233',
+      '/psbt-begin': '1 1',
+      '/psbt-chunk': '1 0',
+      '/psbt-commit': '1',
+      '/sign': '1 cHNidP8signed'
+    }[command]
+  }
+  await signer.hwwXpub("m/84'/1'/0'")
+  await signer.hwwShowAddress("m/84'/1'/0'/0/0", 'tb1qExample')
+  await signer.hwwSendPsbt('cHNidP8', transaction())
+  for (const command of ['/xpub', '/address', '/psbt-begin']) {
+    assert.equal(commands.find(([name]) => name === command)[1][0], 'Testnet')
+  }
+})
+
+for (const network of ['Mainnet', 'Testnet', 'Testnet4']) {
   for (const [accountType, inputType, outputType] of [
     ['p2pkh', 'SPENDADDRESS', 'PAYTOADDRESS'],
     ['p2sh', 'SPENDP2SHWITNESS', 'PAYTOP2SHWITNESS'],

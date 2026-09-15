@@ -23,6 +23,10 @@ const COMMAND_LOG = '/log'
 
 const DEFAULT_RECEIVE_GAP_LIMIT = 20
 
+// Testnet3 and Testnet4 share key/address formats and hardware signing rules.
+const getSigningNetwork = network =>
+  network === 'Testnet4' ? 'Testnet' : network
+
 const HWW_DEFAULT_CONFIG = Object.freeze({
   name: '',
   baudRate: 9600,

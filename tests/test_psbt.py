@@ -153,7 +153,8 @@ def test_compact_segwit_psbt_stays_below_bowser_transfer_limit():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("kind", ["pkh", "sh", "wpkh", "tr"])
-async def test_psbt_api_create_and_extract(kind):
+@pytest.mark.parametrize("network", ["Testnet", "Testnet4"])
+async def test_psbt_api_create_and_extract(kind, network):
     root, _, data = signing_data(kind)
     encoded = await views_api.api_psbt_create(data, _auth=None)
     psbt = PSBT.from_base64(encoded)
@@ -166,7 +167,7 @@ async def test_psbt_api_create_and_extract(kind):
         ExtractPsbt(
             psbt_base64=psbt.to_string(),
             inputs=[{"tx_hex": data.inputs[0].tx_hex}],
-            network="Testnet",
+            network=network,
         ),
         _auth=None,
     )
