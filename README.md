@@ -16,6 +16,14 @@
 
 Monitor an extended public key and generate deterministic fresh public keys with this simple watch only wallet. Invoice payments can also be generated, both through a publically shareable page and API.
 
+### Python dependency
+
+Watchonly requires `wallycore>=1.5.6,<1.6` for address derivation and PSBT handling.
+When installing through LNbits' extension manager, ensure this package is also
+installed in the LNbits Python environment (`uv pip install 'wallycore>=1.5.6,<1.6'`).
+Existing account keys and descriptors retain their addresses and do not need to
+be imported again.
+
 You can now use this wallet on the LNbits [SatsPayServer](https://github.com/lnbits/lnbits/blob/master/lnbits/extensions/satspay/README.md) extension
 
 <a class="text-secondary" href="https://www.youtube.com/watch?v=rQMHzQEPwZY">Video demo</a>

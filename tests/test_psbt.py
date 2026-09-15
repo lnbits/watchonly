@@ -1,97 +1,73 @@
+import json
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
 import pytest
-from embit import bip32, script
-from embit.descriptor import Descriptor
-from embit.networks import NETWORKS
-from embit.psbt import PSBT
-from embit.transaction import SIGHASH, Transaction, TransactionInput, TransactionOutput
+import wallycore as wally
+from fastapi import HTTPException
 
 from .. import views_api
-from ..models import CreatePsbt, ExtractPsbt
-from ..psbt import create_psbt, finalize_signed_psbt
+from ..helpers import address_script, descriptor_script, parse_key, script_address
+from ..models import CreatePsbt, ExtractPsbt, ExtractTx
+from ..psbt import create_psbt, finalize_signed_psbt, psbt_fee
+
+# Captured before the migration, using only deterministic public test seeds.
+VECTORS = json.loads(Path(__file__).with_name("bitcoin_vectors.json").read_text())
+
+
+def signing_vector(kind="wpkh", network="test"):
+    return next(
+        v for v in VECTORS["signing"] if v["kind"] == kind and v["network"] == network
+    )
 
 
 def signing_data(kind="wpkh", network="test"):
-    root = bip32.HDKey.from_seed(bytes(range(32)), version=NETWORKS[network]["xprv"])
-    purpose = {"pkh": 44, "sh": 49, "wpkh": 84, "tr": 86}[kind]
-    path = f"m/{purpose}h/{0 if network == 'main' else 1}h/0h"
-    account = root.derive(path).to_public()
-    key = f"[{root.my_fingerprint.hex()}/{path[2:]}]{account}/{{0,1}}/*"
-    descriptor_text = f"sh(wpkh({key}))" if kind == "sh" else f"{kind}({key})"
-    descriptor = Descriptor.from_string(descriptor_text)
-    spent = descriptor.derive(0, 0)
-    previous = Transaction(
-        vin=[TransactionInput(bytes(32), 0)],
-        vout=[TransactionOutput(100000, spent.script_pubkey())],
+    root = wally.bip32_key_from_seed(
+        bytes(range(32)),
+        (
+            wally.BIP32_VER_MAIN_PRIVATE
+            if network == "main"
+            else wally.BIP32_VER_TEST_PRIVATE
+        ),
+        wally.BIP32_FLAG_KEY_PRIVATE,
     )
-    change = descriptor.derive(3, 1)
-    recipient = script.p2wpkh(root.derive("m/123").get_public_key())
-    data = CreatePsbt(
-        masterpubs=[
-            {
-                "id": "wallet",
-                "public_key": descriptor_text,
-                "fingerprint": root.my_fingerprint.hex(),
-            }
-        ],
-        inputs=[
-            {
-                "tx_id": previous.txid().hex(),
-                "vout": 0,
-                "amount": 100000,
-                "address": spent.address(NETWORKS[network]),
-                "branch_index": 0,
-                "address_index": 0,
-                "wallet": "wallet",
-                "tx_hex": previous.to_string(),
-            }
-        ],
-        outputs=[
-            {"amount": 40000, "address": recipient.address(NETWORKS[network])},
-            {
-                "amount": 59000,
-                "address": change.address(NETWORKS[network]),
-                "wallet": "wallet",
-                "branch_index": 1,
-                "address_index": 3,
-            },
-        ],
-        fee_rate=1,
-        tx_size=200,
-    )
-    return root, descriptor, data
+    data = CreatePsbt(**signing_vector(kind, network)["data"])
+    return root, data.masterpubs[0].public_key, data
+
+
+@pytest.mark.parametrize(
+    "vector", VECTORS["signing"], ids=lambda v: f'{v["network"]}-{v["kind"]}'
+)
+def test_existing_psbt_wire_format_and_signed_transaction(vector):
+    psbt = create_psbt(CreatePsbt(**vector["data"]))
+    # Includes all input/output origins, script metadata and compact witness UTXOs.
+    assert wally.psbt_to_base64(psbt, 0) == vector["unsigned"]
+    assert psbt_fee(psbt) == 1000
+    signed = wally.psbt_from_base64(vector["signed"], 0)
+    tx = finalize_signed_psbt(signed)
+    assert wally.tx_to_hex(tx, wally.WALLY_TX_FLAG_USE_WITNESS) == vector["tx_hex"]
 
 
 @pytest.mark.parametrize("network", ["main", "test"])
 @pytest.mark.parametrize("kind", ["pkh", "sh", "wpkh", "tr"])
 def test_signing_metadata_and_finalization(kind, network):
-    root, descriptor, data = signing_data(kind, network)
-    psbt = PSBT.from_base64(create_psbt(data).to_string())
-    assert psbt.fee() == 1000
-    assert psbt.inputs[0].redeem_script == descriptor.derive(0, 0).redeem_script()
-    assert (psbt.inputs[0].witness_utxo is not None) == (kind != "pkh")
-    assert (psbt.inputs[0].non_witness_utxo is not None) == (kind == "pkh")
-    assert not psbt.outputs[0].bip32_derivations
-    assert not psbt.outputs[0].taproot_bip32_derivations
+    root, _, data = signing_data(kind, network)
+    psbt = create_psbt(data)
+    assert psbt_fee(psbt) == 1000
+    assert bool(wally.psbt_get_input_witness_utxo(psbt, 0)) == (kind != "pkh")
+    assert bool(wally.psbt_get_input_utxo(psbt, 0)) == (kind == "pkh")
+    assert wally.psbt_get_output_keypaths_size(psbt, 0) == 0
+    assert not wally.psbt_get_output_taproot_internal_key(psbt, 0)
     if kind == "tr":
-        assert psbt.inputs[0].taproot_internal_key is not None
-        assert not psbt.inputs[0].bip32_derivations
-        paths = psbt.outputs[1].taproot_bip32_derivations
-        derivation = next(iter(paths.values()))[1]
+        assert wally.psbt_get_input_taproot_internal_key(psbt, 0)
+        assert wally.psbt_get_output_taproot_internal_key(psbt, 1)
+        assert wally.psbt_get_input_keypaths_size(psbt, 0) == 0
     else:
-        derivation = next(iter(psbt.outputs[1].bip32_derivations.values()))
-    assert derivation.fingerprint == root.my_fingerprint
-    assert derivation.derivation[-2:] == [1, 3]
-    assert psbt.sign_with(root) == 1
-    if kind == "tr":
-        # libwally returns PSBT_IN_TAP_KEY_SIG, whereas embit's signer creates
-        # the final witness directly. Exercise the actual libwally wire format.
-        signature = psbt.inputs[0].final_scriptwitness.items[0]
-        psbt.inputs[0].final_scriptwitness = None
-        psbt.inputs[0].unknown = {b"\x13": signature}
-        psbt = PSBT.from_base64(psbt.to_string())
-    finalized = finalize_signed_psbt(psbt)
-    assert finalized is not None
-    assert [out.value for out in finalized.vout] == [40000, 59000]
+        assert wally.psbt_get_output_keypaths_size(psbt, 1) == 1
+    wally.psbt_sign_bip32(psbt, root, 0)
+    tx = finalize_signed_psbt(psbt)
+    assert [wally.tx_get_output_satoshi(tx, i) for i in range(2)] == [40000, 59000]
 
 
 def test_change_metadata_follows_each_output_after_shuffling():
@@ -99,10 +75,9 @@ def test_change_metadata_follows_each_output_after_shuffling():
     data.outputs.reverse()
     data.outputs.append(data.outputs[0].copy(deep=True))
     psbt = create_psbt(data)
-    assert psbt.outputs[0].bip32_derivations
-    assert not psbt.outputs[1].bip32_derivations
-    assert psbt.outputs[2].bip32_derivations
-    assert psbt.outputs[0].bip32_derivations is not psbt.outputs[2].bip32_derivations
+    assert [wally.psbt_get_output_keypaths_size(psbt, i) for i in range(3)] == [1, 0, 1]
+    wally.psbt_set_output_keypaths(psbt, 0, wally.map_keypath_bip32_init(0))
+    assert wally.psbt_get_output_keypaths_size(psbt, 2) == 1
 
 
 @pytest.mark.parametrize(
@@ -123,53 +98,159 @@ def test_inconsistent_change_rejected():
         create_psbt(data)
 
 
-@pytest.mark.parametrize("sighash", [SIGHASH.DEFAULT, SIGHASH.ALL])
+@pytest.mark.parametrize("sighash", [0, 1, 2, 3, 0x81, 0x82, 0x83])
 def test_taproot_key_signature_verification(sighash):
     root, _, data = signing_data("tr")
     psbt = create_psbt(data)
-    psbt.inputs[0].sighash_type = sighash
-    assert psbt.sign_with(root, sighash=sighash) == 1
-    signature = psbt.inputs[0].final_scriptwitness.items[0]
-    psbt.inputs[0].final_scriptwitness = None
-    psbt.inputs[0].unknown = {b"\x13": signature}
-    invalid = PSBT.from_base64(psbt.to_string())
-    invalid.inputs[0].unknown[b"\x13"] = bytes([signature[0] ^ 1]) + signature[1:]
+    wally.psbt_set_input_sighash(psbt, 0, sighash)
+    wally.psbt_sign_bip32(psbt, root, 0)
+    signature = bytes(wally.psbt_get_input_taproot_signature(psbt, 0))
+    assert len(signature) == (65 if sighash else 64)
+    invalid = wally.psbt_clone(psbt, 0)
+    wally.psbt_set_input_taproot_signature(
+        invalid, 0, bytes([signature[0] ^ 1]) + signature[1:]
+    )
     with pytest.raises(ValueError, match="Invalid Taproot"):
         finalize_signed_psbt(invalid)
-    assert finalize_signed_psbt(psbt) is not None
+    assert finalize_signed_psbt(psbt)
+
+
+def test_unsigned_psbt_cannot_be_finalized():
+    _, _, data = signing_data()
+    with pytest.raises(ValueError, match="cannot be finalized"):
+        finalize_signed_psbt(create_psbt(data))
 
 
 def test_compact_segwit_psbt_stays_below_bowser_transfer_limit():
     _, _, data = signing_data()
-    previous = Transaction.from_string(data.inputs[0].tx_hex)
-    previous.vout.extend([previous.vout[0]] * 100)
-    data.inputs[0].tx_hex = previous.to_string()
-    data.inputs[0].tx_id = previous.txid().hex()
+    previous = wally.tx_from_hex(data.inputs[0].tx_hex, 0)
+    spk = wally.tx_get_output_script(previous, 0)
+    for _ in range(100):
+        wally.tx_add_raw_output(previous, data.inputs[0].amount, spk, 0)
+    data.inputs[0].tx_hex = wally.tx_to_hex(previous, 0)
+    data.inputs[0].tx_id = bytes(wally.tx_get_txid(previous))[::-1].hex()
     data.inputs = [data.inputs[0].copy(update={"vout": i}) for i in range(64)]
-    encoded = create_psbt(data).to_string()
+    encoded = wally.psbt_to_base64(create_psbt(data), 0)
     assert len(encoded) <= 16384
-    assert len(PSBT.from_base64(encoded).inputs) == 64
+    assert wally.psbt_get_num_inputs(wally.psbt_from_base64(encoded, 0)) == 64
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("kind", ["pkh", "sh", "wpkh", "tr"])
-@pytest.mark.parametrize("network", ["Testnet", "Testnet4"])
+@pytest.mark.parametrize("network", ["Mainnet", "Testnet", "Testnet4"])
 async def test_psbt_api_create_and_extract(kind, network):
-    root, _, data = signing_data(kind)
+    root, _, data = signing_data(kind, "main" if network == "Mainnet" else "test")
     encoded = await views_api.api_psbt_create(data, _auth=None)
-    psbt = PSBT.from_base64(encoded)
-    assert psbt.sign_with(root) == 1
-    if kind == "tr":
-        signature = psbt.inputs[0].final_scriptwitness.items[0]
-        psbt.inputs[0].final_scriptwitness = None
-        psbt.inputs[0].unknown = {b"\x13": signature}
+    psbt = wally.psbt_from_base64(encoded, 0)
+    wally.psbt_sign_bip32(psbt, root, 0)
     result = await views_api.api_psbt_extract_tx(
         ExtractPsbt(
-            psbt_base64=psbt.to_string(),
+            psbt_base64=wally.psbt_to_base64(psbt, 0),
             inputs=[{"tx_hex": data.inputs[0].tx_hex}],
             network=network,
         ),
         _auth=None,
     )
-    assert result.tx_hex
-    assert len(Transaction.from_string(result.tx_hex).vout) == 2
+    assert (
+        wally.tx_get_num_outputs(
+            wally.tx_from_hex(result.tx_hex, wally.WALLY_TX_FLAG_USE_WITNESS)
+        )
+        == 2
+    )
+    details = json.loads(result.tx_json)
+    assert details["fee"] == 1000
+    assert details["outputs"] == [
+        {"amount": out.amount, "address": out.address} for out in data.outputs
+    ]
+    raw = await views_api.api_extract_tx(
+        ExtractTx(tx_hex=result.tx_hex, network=network), _auth=None
+    )
+    assert raw["tx_json"] == {k: v for k, v in details.items() if k != "fee"}
+    request = SimpleNamespace(json=AsyncMock(return_value={"psbtBase64": encoded}))
+    assert await views_api.api_psbt_utxos_tx(request, _auth=None) == [
+        {"tx_id": data.inputs[0].tx_id, "vout": 0}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_extract_rejects_unrelated_previous_transaction():
+    vector = signing_vector()
+    wrong = signing_vector("pkh")["data"]["inputs"][0]["tx_hex"]
+    with pytest.raises(HTTPException, match="outpoint"):
+        await views_api.api_psbt_extract_tx(
+            ExtractPsbt(psbt_base64=vector["signed"], inputs=[{"tx_hex": wrong}]),
+            _auth=None,
+        )
+
+
+@pytest.mark.parametrize("wrapper", ["sh", "wsh", "sh(wsh"])
+def test_multisig_metadata_and_signatures(wrapper):
+    root, text, data = signing_data()
+    second = wally.bip32_key_from_seed(
+        bytes(range(1, 33)), wally.BIP32_VER_TEST_PRIVATE, 0
+    )
+    second_pub = wally.bip32_key_to_base58(second, wally.BIP32_FLAG_KEY_PUBLIC)
+    fingerprint = bytes(wally.bip32_key_get_fingerprint(second)).hex()
+    first_key = text[5:-1]
+    data.masterpubs[0].public_key = (
+        f"{wrapper}(sortedmulti(2,{first_key},[{fingerprint}]{second_pub}/{{0,1}}/*)"
+        + ")" * (wrapper.count("(") + 1)
+    )
+    descriptor, _ = parse_key(data.masterpubs[0].public_key)
+    address = script_address(
+        descriptor_script(descriptor), wally.WALLY_NETWORK_BITCOIN_TESTNET
+    )
+    previous = wally.tx_from_hex(data.inputs[0].tx_hex, 0)
+    wally.tx_set_output_script(previous, 0, address_script(address))
+    data.inputs[0].tx_hex = wally.tx_to_hex(previous, 0)
+    data.inputs[0].tx_id = bytes(wally.tx_get_txid(previous))[::-1].hex()
+    data.inputs[0].address = address
+    data.outputs[1].address = wally.descriptor_to_address(descriptor, 0, 1, 3, 0)
+    psbt = create_psbt(data)
+    assert wally.psbt_get_input_keypaths_size(psbt, 0) == 2
+    assert bool(wally.psbt_get_input_witness_script(psbt, 0)) == (wrapper != "sh")
+    wally.psbt_sign_bip32(psbt, root, 0)
+    with pytest.raises(ValueError, match="cannot be finalized"):
+        finalize_signed_psbt(wally.psbt_clone(psbt, 0))
+    wally.psbt_sign_bip32(psbt, second, 0)
+    assert finalize_signed_psbt(psbt)
+
+
+@pytest.mark.parametrize(
+    "kind,prefix,purpose",
+    [("pkh", "043587cf", 44), ("sh", "044a5262", 49), ("wpkh", "045f1cf6", 84)],
+)
+def test_bare_account_key_signing_metadata(kind, prefix, purpose):
+    root, text, data = signing_data(kind)
+    descriptor, _ = parse_key(text)
+    account = wally.descriptor_get_key(descriptor, 0)
+    raw = bytes(wally.base58_to_bytes(account, wally.BASE58_FLAG_CHECKSUM))
+    data.masterpubs[0].public_key = wally.base58_from_bytes(
+        bytes.fromhex(prefix) + raw[4:], wally.BASE58_FLAG_CHECKSUM
+    )
+    psbt = create_psbt(data)
+    account_private = wally.bip32_key_from_parent_path(
+        root, [purpose | 2**31, 1 | 2**31, 2**31], 0
+    )
+    keypath = bytes(wally.psbt_get_input_keypath(psbt, 0, 0))
+    assert keypath[:4] == bytes(wally.bip32_key_get_fingerprint(account_private))
+    assert keypath[4:] == bytes(8)  # Relative account path /0/0.
+    wally.psbt_sign_bip32(psbt, account_private, 0)
+    assert finalize_signed_psbt(psbt)
+
+
+def test_taproot_tree_addresses_preserved_but_signing_rejected():
+    _, text, data = signing_data("tr")
+    key = text[3:-1]
+    data.masterpubs[0].public_key = f"tr({key},{{pk({key}),pk({key})}})"
+    descriptor, _ = parse_key(data.masterpubs[0].public_key)
+    address = script_address(
+        descriptor_script(descriptor), wally.WALLY_NETWORK_BITCOIN_TESTNET
+    )
+    assert address.startswith("tb1p")
+    previous = wally.tx_from_hex(data.inputs[0].tx_hex, 0)
+    wally.tx_set_output_script(previous, 0, address_script(address))
+    data.inputs[0].tx_hex = wally.tx_to_hex(previous, 0)
+    data.inputs[0].tx_id = bytes(wally.tx_get_txid(previous))[::-1].hex()
+    with pytest.raises(ValueError, match="Only Taproot key-spend"):
+        create_psbt(data)

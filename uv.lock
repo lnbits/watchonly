@@ -2135,11 +2135,41 @@ wheels = [
 ]
 
 [[package]]
+name = "wallycore"
+version = "1.5.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/dd/f1/cc75bc4af58d0769693171a5d085ae01a047f839a1e2b802399890f0159a/wallycore-1.5.6.tar.gz", hash = "sha256:30190ab70803484f569f3341337730134d291dd01a4e4b07028b94c7a42771d9", size = 3342314, upload-time = "2026-07-11T18:35:38.609Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c0/1b/6a201a84c1b7bd1e1dd9a7595fca635a9eb0a3ab2af940387f00b310708f/wallycore-1.5.6-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:6bd53b0b182b428649400d9a42dcc1617a5f8bedc69ff9302e0d813da88ee581", size = 3443634, upload-time = "2026-07-11T18:33:56.101Z" },
+    { url = "https://files.pythonhosted.org/packages/f4/45/cae2918dec9ac09cb97434ea278587164e48734458a8c4214948d6340eb9/wallycore-1.5.6-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:d69f497648aab5ea40ccf4a230ba74b67fcbcb77d21e20bb83aeaff88546eef7", size = 1763288, upload-time = "2026-07-11T18:33:59.681Z" },
+    { url = "https://files.pythonhosted.org/packages/11/4c/fd053537ca2e25004cd321d9f1480b049bfd223c0b6172edf18446f9990c/wallycore-1.5.6-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:22b2d35148712f9aeec12df152df61001d58221c2d5ed386e8600d0c8741ff36", size = 1703083, upload-time = "2026-07-11T18:34:03.142Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/f6/1cce0b328cfaeb84f71af88ded5845b02dea15d016b861da2ce837a5587f/wallycore-1.5.6-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:06e792f9f1d25c0fc712fbe55ec7a0c6eea0d2adb93d4896a99d1cfe84007004", size = 4248872, upload-time = "2026-07-11T18:34:07.494Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/de/f17b420766f255a8354ff8d36274d14797b0dc1eb5160f1010e79ff6fec7/wallycore-1.5.6-cp310-cp310-manylinux_2_28_x86_64.whl", hash = "sha256:2218c2f03e94880bb8275a92afb1dfe9f36db4cb0b5e46563ac4d189f7f4265a", size = 4400640, upload-time = "2026-07-11T18:34:11.248Z" },
+    { url = "https://files.pythonhosted.org/packages/52/8d/e305f86a13557410e3bc7785281c1d8636ab5fae40e5afa341daed113be8/wallycore-1.5.6-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:b7fd6ad8b9e0d1af6215b9b0b9608439d292766fe27a81d7b0a393f694324ddf", size = 4299804, upload-time = "2026-07-11T18:34:14.066Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/51/3ef62699c1cce907647dbf68dd7a65eb6e6ede2b9154c82bbde60a867ca3/wallycore-1.5.6-cp310-cp310-win_amd64.whl", hash = "sha256:a475354306d399385bc6b09d469d271d033d7eaf47347fb840959a65beebd399", size = 1686191, upload-time = "2026-07-11T18:34:16.097Z" },
+    { url = "https://files.pythonhosted.org/packages/93/83/497efb24131bdab859dc92f266d9082fcdc86cdf67c91e090c5356e4fb4f/wallycore-1.5.6-cp311-cp311-macosx_10_9_universal2.whl", hash = "sha256:346b00a64b5b82e3cb2b314833c285e27b323a1b88507994680ce019cba45e20", size = 3443632, upload-time = "2026-07-11T18:34:18.395Z" },
+    { url = "https://files.pythonhosted.org/packages/e5/84/8955d83db7344cf1354961a406133b0878ffc4710971e652b033854d6c3c/wallycore-1.5.6-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:5da259f60f32fd43dc65b201fcc8dd653d41fabfea0b6b3f34ef98a46f02380b", size = 1763289, upload-time = "2026-07-11T18:34:20.868Z" },
+    { url = "https://files.pythonhosted.org/packages/25/3a/ca90753eefdd84f90f1d99148601146b35572639848014d6ee68460720fb/wallycore-1.5.6-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:0ede49015381ada66fa5523461ec54d3ca8bfe0c119ef289dfb634c95a0781fc", size = 1703083, upload-time = "2026-07-11T18:34:22.92Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/08/9572d3f4878f4f023de0619040b4e20f1bdfed84302c6bae8401cbba38d3/wallycore-1.5.6-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:1bcad25770c03066a5a6796f4475c662f1dcc931e5a3e20288dd46c6e8693a22", size = 4312027, upload-time = "2026-07-11T18:34:25.832Z" },
+    { url = "https://files.pythonhosted.org/packages/fe/9c/d21b841c87bbc07cf289d799e587db22b2cc3ceef4090132e83817337570/wallycore-1.5.6-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:f429742a72f4264dc6040a65e96c2bf46c96c3662ba87ec5798886fa94cb2e9c", size = 4459669, upload-time = "2026-07-11T18:34:28.085Z" },
+    { url = "https://files.pythonhosted.org/packages/d5/b6/6d594ef9ef5af7fa49cfc78d59f5dfa1687088db4529bce470316ba96124/wallycore-1.5.6-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:1fbcb32a826dc8bd2762c68e21ccaa64bc1d6c4a3083c19e39fe04a57d30daff", size = 4357440, upload-time = "2026-07-11T18:34:31.524Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/fd/a7cccb43d89e0e2399321b7ecc5dddf1108e2b5e4715633b13833f52f849/wallycore-1.5.6-cp311-cp311-win_amd64.whl", hash = "sha256:da5cad9e53105702925e5408de85c52f52e383a6e728fd95474d73bcf5e9c5ea", size = 1686189, upload-time = "2026-07-11T18:34:33.811Z" },
+    { url = "https://files.pythonhosted.org/packages/a5/0a/b376b11357f4bb6a3bba38111a1d5009936b8784a407dab51f80b0a5f277/wallycore-1.5.6-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:bb5781ae6b332fe3cc5f5ec40c3c92187b9cac46e50103524b34072c42f1be2c", size = 3442858, upload-time = "2026-07-11T18:34:36.062Z" },
+    { url = "https://files.pythonhosted.org/packages/f8/af/6f3ea507aa18016e1ba1a8a6447745bcd5f7ea77ffa4ab4b53608152bd11/wallycore-1.5.6-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:e747c949a8d41f072e71059f0cd43fecdf5289155b2a6757dac0e3c8899603ac", size = 1762465, upload-time = "2026-07-11T18:34:38.941Z" },
+    { url = "https://files.pythonhosted.org/packages/87/fa/1058abd693e8add7a0e59cdcd9773f1303cce4b9c2c5dbee80fbc19a7a93/wallycore-1.5.6-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:d30263dd0a47d06602d1cf80f9f655f72fcff4878077379f4ddd62ab9e675037", size = 1703199, upload-time = "2026-07-11T18:34:40.928Z" },
+    { url = "https://files.pythonhosted.org/packages/d5/dd/20f31cc7207261a066e0eaba2c50dad37d984e2313bb96304dce3452b626/wallycore-1.5.6-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:94a630c61f99a14a16dab134e54f37be9127f501858f4c1e1b0aa9b2f6b61406", size = 4304471, upload-time = "2026-07-11T18:34:43.233Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/1c/c6aa8cb3999c91357ac268bcad511f2adc40da7d69ba9b8e352b7635f3d9/wallycore-1.5.6-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:d6112264a688c94fc9e0a2d8988ffa9b1432624a0709e8a6bdae95198f150f65", size = 4454550, upload-time = "2026-07-11T18:34:45.742Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/cf/9f23cd0625df993e467a90e990e2fb01dcebb65b3239abaf4ee4181f6933/wallycore-1.5.6-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:bce71287e777f0c9018dd6d552f4a09c55bb9dc502bc3b72a5d727618bc23be5", size = 4351870, upload-time = "2026-07-11T18:34:47.906Z" },
+    { url = "https://files.pythonhosted.org/packages/cf/7c/007a6a770ed5663f641438e1247b10d8084014065d3bc798edbccf785fe2/wallycore-1.5.6-cp312-cp312-win_amd64.whl", hash = "sha256:a4269199b8eee298ef95621ea21b3c9ef7be406bd1459d0e2f51206a1a0ac422", size = 1686608, upload-time = "2026-07-11T18:34:49.98Z" },
+]
+
+[[package]]
 name = "watchonly"
 version = "1.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "lnbits" },
+    { name = "wallycore" },
 ]
 
 [package.dev-dependencies]
@@ -2154,7 +2184,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "lnbits", specifier = ">=1.4" }]
+requires-dist = [
+    { name = "lnbits", specifier = ">=1.4" },
+    { name = "wallycore", specifier = ">=1.5.6,<1.6" },
+]
 
 [package.metadata.requires-dev]
 dev = [

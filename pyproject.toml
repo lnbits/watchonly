@@ -5,7 +5,7 @@ description = "LNbits, free and open-source Lightning wallet and accounts system
 requires-python = ">=3.10,<3.13"
 authors = [{ name = "Alan Bits", email = "alan@lnbits.com" }]
 urls = { Homepage = "https://lnbits.com", Repository = "https://github.com/lnbits/lnbits" }
-dependencies = ["lnbits>=1.4"]
+dependencies = ["lnbits>=1.4", "wallycore>=1.5.6,<1.6"]
 
 [dependency-groups]
 dev = [
@@ -25,7 +25,7 @@ package-mode = false
 exclude = "(nostr/*)"
 [[tool.mypy.overrides]]
 module = [
-  "embit.*",
+  "wallycore",
   "lnbits.*",
   "lnurl.*",
   "loguru.*",

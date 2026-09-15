@@ -241,8 +241,8 @@
                       class="text-secondary"
                       target="_blank"
                       style="color: unset"
-                      href="https://github.com/diybitcoinhardware/embit"
-                      >Embit</a
+                      href="https://github.com/ElementsProject/libwally-core"
+                      >libwally</a
                     ></small
                   >)
                   <br />

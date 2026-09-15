@@ -2,9 +2,7 @@ import json
 from http import HTTPStatus
 
 import httpx
-from embit.networks import NETWORKS
-from embit.psbt import PSBT
-from embit.transaction import Transaction
+import wallycore as wally
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from lnbits.helpers import urlsafe_short_hash
 
@@ -28,7 +26,12 @@ from .decorators import (
     require_watchonly_admin_account,
     require_watchonly_read_account,
 )
-from .helpers import parse_key
+from .helpers import (
+    descriptor_fingerprint,
+    descriptor_type,
+    parse_key,
+    transaction_details,
+)
 from .models import (
     Address,
     Config,
@@ -40,7 +43,12 @@ from .models import (
     SignedTransaction,
     WalletAccount,
 )
-from .psbt import create_psbt, finalize_signed_psbt
+from .psbt import (
+    create_psbt,
+    finalize_signed_psbt,
+    psbt_fee,
+    set_previous_transaction,
+)
 
 watchonly_api_router = APIRouter()
 
@@ -81,8 +89,8 @@ async def api_wallet_create_or_update(
             id=urlsafe_short_hash(),
             user=auth.user_id,
             masterpub=data.masterpub,
-            fingerprint=descriptor.keys[0].fingerprint.hex(),
-            type=descriptor.scriptpubkey_type(),
+            fingerprint=descriptor_fingerprint(descriptor),
+            type=descriptor_type(descriptor),
             title=data.title,
             address_no=-1,  # fresh address on empty wallet can get address with index 0
             balance=0,
@@ -232,7 +240,7 @@ async def api_psbt_create(
     _auth: WatchOnlyAuth = Depends(require_watchonly_admin_account),
 ):
     try:
-        return create_psbt(data).to_string()
+        return wally.psbt_to_base64(create_psbt(data), 0)
 
     except Exception as exc:
         raise HTTPException(
@@ -249,10 +257,17 @@ async def api_psbt_utxos_tx(
 
     body = await req.json()
     try:
-        psbt = PSBT.from_base64(body["psbtBase64"])
+        psbt = wally.psbt_from_base64(body["psbtBase64"], 0)
         res = []
-        for _, inp in enumerate(psbt.inputs):
-            res.append({"tx_id": inp.txid.hex(), "vout": inp.vout})
+        for index in range(wally.psbt_get_num_inputs(psbt)):
+            res.append(
+                {
+                    "tx_id": bytes(wally.psbt_get_input_previous_txid(psbt, index))[
+                        ::-1
+                    ].hex(),
+                    "vout": wally.psbt_get_input_output_index(psbt, index),
+                }
+            )
 
         return res
     except Exception as exc:
@@ -266,29 +281,21 @@ async def api_psbt_extract_tx(
     data: ExtractPsbt,
     _auth: WatchOnlyAuth = Depends(require_watchonly_admin_account),
 ) -> SignedTransaction:
-    network = NETWORKS["main"] if data.network == "Mainnet" else NETWORKS["test"]
+    network = (
+        wally.WALLY_NETWORK_BITCOIN_MAINNET
+        if data.network == "Mainnet"
+        else wally.WALLY_NETWORK_BITCOIN_TESTNET
+    )
     try:
-        psbt = PSBT.from_base64(data.psbt_base64)
+        psbt = wally.psbt_from_base64(data.psbt_base64, 0)
         for i, inp in enumerate(data.inputs):
-            psbt.inputs[i].non_witness_utxo = Transaction.from_string(inp.tx_hex)
+            set_previous_transaction(psbt, i, inp.tx_hex)
 
-        final_psbt = finalize_signed_psbt(psbt)
-        if not final_psbt:
-            raise ValueError("PSBT cannot be finalized!")
-
-        tx_hex = final_psbt.to_string()
-        transaction = Transaction.from_string(tx_hex)
-        tx = {
-            "locktime": transaction.locktime,
-            "version": transaction.version,
-            "outputs": [],
-            "fee": psbt.fee(),
-        }
-
-        for out in transaction.vout:
-            tx["outputs"].append(
-                {"amount": out.value, "address": out.script_pubkey.address(network)}
-            )
+        fee = psbt_fee(psbt)
+        transaction = finalize_signed_psbt(psbt)
+        tx_hex = wally.tx_to_hex(transaction, wally.WALLY_TX_FLAG_USE_WITNESS)
+        tx = transaction_details(transaction, network)
+        tx["fee"] = fee
         signed_tx = SignedTransaction(tx_hex=tx_hex, tx_json=json.dumps(tx))
         return signed_tx
     except Exception as exc:
@@ -302,19 +309,14 @@ async def api_extract_tx(
     data: ExtractTx,
     _auth: WatchOnlyAuth = Depends(require_watchonly_admin_account),
 ):
-    network = NETWORKS["main"] if data.network == "Mainnet" else NETWORKS["test"]
+    network = (
+        wally.WALLY_NETWORK_BITCOIN_MAINNET
+        if data.network == "Mainnet"
+        else wally.WALLY_NETWORK_BITCOIN_TESTNET
+    )
     try:
-        transaction = Transaction.from_string(data.tx_hex)
-        tx = {
-            "locktime": transaction.locktime,
-            "version": transaction.version,
-            "outputs": [],
-        }
-
-        for out in transaction.vout:
-            tx["outputs"].append(
-                {"amount": out.value, "address": out.script_pubkey.address(network)}
-            )
+        transaction = wally.tx_from_hex(data.tx_hex, wally.WALLY_TX_FLAG_USE_WITNESS)
+        tx = transaction_details(transaction, network)
         return {"tx_json": tx}
     except Exception as exc:
         raise HTTPException(
