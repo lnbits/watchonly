@@ -6,7 +6,11 @@ window.app.component('wallet-config', {
   emits: ['update:config-data'],
   data: function () {
     return {
-      networkOptions: ['Mainnet', 'Testnet'],
+      networkOptions: [
+        {label: 'Mainnet', value: 'Mainnet'},
+        {label: 'Testnet4', value: 'Testnet4'},
+        {label: 'Testnet3', value: 'Testnet'}
+      ],
       internalConfig: {},
       show: false
     }

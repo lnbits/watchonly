@@ -15,4 +15,4 @@ watchonly_ext: APIRouter = APIRouter(prefix="/watchonly", tags=["watchonly"])
 watchonly_ext.include_router(watchonly_generic_router)
 watchonly_ext.include_router(watchonly_api_router)
 
-__all__ = ["watchonly_ext", "watchonly_static_files", "db"]
+__all__ = ["db", "watchonly_ext", "watchonly_static_files"]

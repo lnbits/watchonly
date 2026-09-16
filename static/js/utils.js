@@ -5,25 +5,31 @@ const COMMAND_PASSWORD = '/password'
 const COMMAND_PASSWORD_CLEAR = '/password-clear'
 const COMMAND_ADDRESS = '/address'
 const COMMAND_SEND_PSBT = '/psbt'
+const COMMAND_PSBT_BEGIN = '/psbt-begin'
+const COMMAND_PSBT_CHUNK = '/psbt-chunk'
+const COMMAND_PSBT_COMMIT = '/psbt-commit'
+const COMMAND_PSBT_REVIEW = '/psbt-review'
+const COMMAND_NEW = '/new'
 const COMMAND_SIGN_PSBT = '/sign'
 const COMMAND_HELP = '/help'
 const COMMAND_WIPE = '/wipe'
 const COMMAND_SEED = '/seed'
+const COMMAND_TRNG = '/trng'
 const COMMAND_RESTORE = '/restore'
 const COMMAND_CONFIRM_NEXT = '/confirm-next'
 const COMMAND_CANCEL = '/cancel'
 const COMMAND_XPUB = '/xpub'
 const COMMAND_PAIR = '/pair'
 const COMMAND_LOG = '/log'
-const COMMAND_CHECK_PAIRING = '/check-pairing'
 
 const DEFAULT_RECEIVE_GAP_LIMIT = 20
-const PAIRING_CONTROL_TEXT = 'lnbits'
+
+// Testnet3 and Testnet4 share key/address formats and hardware signing rules.
+const getSigningNetwork = network =>
+  network === 'Testnet4' ? 'Testnet' : network
 
 const HWW_DEFAULT_CONFIG = Object.freeze({
   name: '',
-  buttonOnePin: '',
-  buttonTwoPin: '',
   baudRate: 9600,
   bufferSize: 255,
   dataBits: 8,
@@ -137,7 +143,7 @@ const readFromSerialPort = reader => {
   let fulliness = []
 
   const readStringUntil = async (separator = '\n') => {
-    if (fulliness.length) return fulliness.shift().trim()
+    if (fulliness.length) return {value: fulliness.shift().trim(), done: false}
     const chunks = []
     if (partialChunk) {
       // leftovers from previous read
@@ -196,8 +202,8 @@ function findAccountPathIssues(path = '') {
   const p = path.split('/')
   if (p[0] !== 'm') return "Path must start with 'm/'"
   for (let i = 1; i < p.length; i++) {
-    if (p[i].endsWith('')) p[i] = p[i].substring(0, p[i].length - 1)
-    if (isNaN(p[i])) return `${p[i]} is not a valid value`
+    if (!/^\d+'?$/.test(p[i]) || Number(p[i].replace("'", '')) >= 0x80000000)
+      return `${p[i]} is not a valid value`
   }
 }
 

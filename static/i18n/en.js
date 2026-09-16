@@ -1,5 +1,32 @@
 window.i18n.global.mergeLocaleMessage('en', {
   watchonly: {
+    bowser_transfer: 'Transferring PSBT to Bowser Wallet',
+    bowser_physical_review:
+      'Waiting for approval or rejection on Bowser Wallet',
+    bowser_seed_display: 'Seed words are shown only on the hardware display.',
+    bowser_review_on_device: 'Review on the hardware display',
+    trng_check: 'TRNG integrity check',
+    trng_check_desc:
+      'Check the hardware random number generator on Bowser Wallet.',
+    trng_result: 'TRNG diagnostic result',
+    trng_running:
+      'Sampling on Bowser Wallet. Watch the histogram on the device.',
+    trng_healthy: 'Distribution looks healthy',
+    trng_unexpected: 'Unexpected distribution — do not create a wallet yet',
+    trng_failed: 'TRNG check failed',
+    trng_samples: 'Samples across 100 bins',
+    trng_expected: 'Expected per bin',
+    trng_range: 'Observed range',
+    trng_chi_squared: 'Chi-squared',
+    trng_interval: 'Chi-squared expected interval: 61.137–148.230',
+    trng_thresholds:
+      'Below 61.137: suspiciously uniform. Above 148.230: excessively uneven.',
+    trng_limit:
+      'This checks for obvious distribution problems. A passing result cannot guarantee future wallet entropy.',
+    trng_continue:
+      'Press Continue on Bowser Wallet to dismiss the histogram before another device action.',
+    trng_firmware:
+      'This check requires Bowser firmware with TRNG diagnostic support.',
     scan_blockchain: 'Scan Blockchain',
     new_payment: 'New Payment',
     new_payment_desc: 'Create a new payment by selecting Inputs and Outputs',
@@ -160,8 +187,10 @@ window.i18n.global.mergeLocaleMessage('en', {
     enter_password_hww_full:
       'Enter password for Hardware Wallet (8 numbers/letters)',
     password: 'Password',
-    passphrase_optional: 'Passphrase (optional)',
-    passphrase: 'Passphrase',
+    passphrase_optional: 'BIP39 passphrase (optional)',
+    passphrase: 'BIP39 passphrase',
+    passphrase_hint:
+      'Selects a different wallet from the same seed words. Spaces matter. To switch wallets, log out and log in with the other passphrase, then import its xpub. Existing accounts stay unchanged.',
     address_colon: 'Address:',
     amount_label: 'Amount:',
     confirm_check_device: 'Confirm then check the Hardware Device.',
@@ -169,7 +198,7 @@ window.i18n.global.mergeLocaleMessage('en', {
     wipe_warning:
       'This action will remove all data from the Hardware Wallet. Please create a back-up for the seed!',
     enter_new_password_hww:
-      'Enter new password for Hardware Wallet (8 numbers/letters)',
+      'Enter a new hardware wallet password (at least 8 characters, no spaces)',
     confirm_password: 'Confirm Password',
     irreversible_warning: 'This action cannot be reversed!',
     open_dev_console_warning:
@@ -181,7 +210,8 @@ window.i18n.global.mergeLocaleMessage('en', {
       'For test purposes only. Do not enter word list with real funds!!!',
     enter_word_list_space: 'Enter word list separated by space',
     word_list: 'Word List',
-    enter_new_password_short: 'Enter new password (8 numbers/letters)',
+    enter_new_password_short:
+      'Enter a new password (at least 8 characters, no spaces)',
     new_password: 'New Password',
     all_data_lost_warning:
       'ALL existing data on the Hardware Device will be lost.',
