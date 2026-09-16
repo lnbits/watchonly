@@ -44,6 +44,7 @@ from .models import (
     WalletAccount,
 )
 from .psbt import (
+    combine_matching_psbt,
     create_psbt,
     finalize_signed_psbt,
     psbt_fee,
@@ -288,6 +289,9 @@ async def api_psbt_extract_tx(
     )
     try:
         psbt = wally.psbt_from_base64(data.psbt_base64, 0)
+        if data.expected_psbt_base64:
+            expected = wally.psbt_from_base64(data.expected_psbt_base64, 0)
+            psbt = combine_matching_psbt(expected, psbt)
         for i, inp in enumerate(data.inputs):
             set_previous_transaction(psbt, i, inp.tx_hex)
 

@@ -38,6 +38,7 @@ window.app.component('payment', {
       showCustomFee: false,
       showCoinSelect: false,
       showChecking: false,
+      finalizing: false,
       showChange: false,
       showPsbt: false,
       showFinalTx: false,
@@ -91,6 +92,7 @@ window.app.component('payment', {
       this.showFinalTx = false
     },
     checkAndSend: async function () {
+      if (this.showChecking) return
       this.showChecking = true
       try {
         if (!this.serialSignerRef.isConnected()) {
@@ -126,7 +128,9 @@ window.app.component('payment', {
             inputs: this.tx.inputs,
             outputs: this.tx.outputs,
             feeRate: this.tx.fee_rate,
-            feeValue: this.feeValue
+            feeValue:
+              this.tx.inputs.reduce((sum, input) => sum + input.amount, 0) -
+              this.tx.outputs.reduce((sum, output) => sum + output.amount, 0)
           }
           await this.serialSignerRef.hwwSendPsbt(this.psbtBase64, txData)
           await this.serialSignerRef.isSendingPsbt()
@@ -139,11 +143,13 @@ window.app.component('payment', {
           timeout: 10000
         })
       } finally {
-        this.showChecking = false
+        this.showChecking = this.finalizing
         this.psbtBase64 = null
       }
     },
     showPsbtDialog: async function () {
+      if (this.showChecking) return
+      this.showChecking = true
       try {
         const valid = await this.$refs.paymentFormRef.validate()
         if (!valid) return
@@ -159,17 +165,19 @@ window.app.component('payment', {
           caption: `${error}`,
           timeout: 10000
         })
+      } finally {
+        this.showChecking = false
       }
     },
     createPsbt: async function () {
+      this.psbtBase64 = null
       try {
         this.tx = this.createTx()
+        const changeOutput = this.tx.outputs.find(o => o.branch_index === 1)
+        if (changeOutput) changeOutput.amount = this.changeAmount
         for (const input of this.tx.inputs) {
           input.tx_hex = await this.fetchTxHex(input.tx_id)
         }
-
-        const changeOutput = this.tx.outputs.find(o => o.branch_index === 1)
-        if (changeOutput) changeOutput.amount = this.changeAmount
 
         const {data} = await LNbits.api.request(
           'POST',
@@ -255,44 +263,50 @@ window.app.component('payment', {
       this.selectChangeAddress(this.changeWallet)
     },
     updateSignedPsbt: async function (psbtBase64) {
+      if (this.finalizing) return
       try {
+        this.finalizing = true
         this.showChecking = true
         this.psbtBase64Signed = psbtBase64
+        this.showFinalTx = false
+        this.signedTx = null
+        this.signedTxHex = null
 
         const data = await this.extractTxFromPsbt(psbtBase64)
-        this.showFinalTx = true
-        if (data) {
+        if (data?.tx_hex) {
           this.signedTx = JSON.parse(data.tx_json)
           this.signedTxHex = data.tx_hex
-        } else {
-          this.signedTx = null
-          this.signedTxHex = null
+          this.showFinalTx = true
         }
       } finally {
+        this.finalizing = false
         this.showChecking = false
       }
     },
     updateSignedTx: async function (txData) {
+      if (this.finalizing) return
       try {
+        this.finalizing = true
         this.showChecking = true
+        this.showFinalTx = false
+        this.signedTx = null
+        this.signedTxHex = null
 
         const data = await this.extractTx(txData.serializedTx)
-        this.showFinalTx = true
         if (data) {
           this.signedTx = data.tx_json
           this.signedTx.fee = txData.feeValue
           this.signedTxHex = txData.serializedTx
-        } else {
-          this.signedTx = null
-          this.signedTxHex = null
+          this.showFinalTx = true
         }
       } finally {
+        this.finalizing = false
         this.showChecking = false
       }
     },
 
-    fetchUtxoHexForPsbt: async function (psbtBase64) {
-      if (this.tx?.inputs && this.tx?.inputs.length) return this.tx.inputs
+    fetchUtxoHexForPsbt: async function (psbtBase64, expectedPsbtBase64) {
+      if (expectedPsbtBase64 && this.tx?.inputs?.length) return this.tx.inputs
 
       const {data: psbtUtxos} = await LNbits.api.request(
         'PUT',
@@ -310,7 +324,12 @@ window.app.component('payment', {
     },
     extractTxFromPsbt: async function (psbtBase64) {
       try {
-        const inputs = await this.fetchUtxoHexForPsbt(psbtBase64)
+        // Capture before awaiting: the hardware signing call clears psbtBase64.
+        const expectedPsbtBase64 = this.psbtBase64 || undefined
+        const inputs = await this.fetchUtxoHexForPsbt(
+          psbtBase64,
+          expectedPsbtBase64
+        )
 
         const {data} = await LNbits.api.request(
           'PUT',
@@ -318,6 +337,7 @@ window.app.component('payment', {
           this.adminkey,
           {
             psbtBase64,
+            expectedPsbtBase64,
             inputs,
             network: this.network
           }
@@ -356,6 +376,7 @@ window.app.component('payment', {
       }
     },
     broadcastTransaction: async function () {
+      if (!this.signedTxHex || this.showChecking) return
       try {
         const {data} = await LNbits.api.request(
           'POST',

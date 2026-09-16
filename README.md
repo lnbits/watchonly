@@ -104,6 +104,22 @@ not carry over to Testnet4. No seed export or firmware update is needed.
 - a confirmation will be shown for each Output and for the Fee
 - after the user confirms the addresses and amounts, the transaction will be signed on the Hardware Device
 
+To connect Bowser Wallet, close its webapp or any other serial monitor first.
+Use a Web Serial capable browser (Chrome, Chromium, Brave, or Edge) over HTTPS
+(or localhost). Restart Bowser and select its USB serial port in Watchonly during
+the device's 10-second pairing countdown. Confirm that the code in Watchonly
+matches the hardware display, then use Login before importing an account or
+signing. If the countdown expires, restart the device and try again. Watchonly
+only marks the device connected after code confirmation and releases the port
+when pairing fails, the device disconnects, or you leave the page.
+
+After a successful Bowser wipe, Watchonly opens seed backup at word 1. The words
+remain on the hardware display. The USB menu also offers a **TRNG integrity
+check**, using Bowser's on-device diagnostic and showing its 5,000-sample
+summary. A passing distribution check does not guarantee future wallet entropy.
+Press Continue on Bowser to dismiss its histogram before another device action.
+This feature requires firmware with `/trng` support.
+
 Bowser Wallet uses the chunked `/psbt-begin`, `/psbt-chunk`, and `/psbt-commit`
 protocol. Use current Bowser firmware; older firmware without these commands
 must be upgraded. Approve or reject each output, the fee, and final signing on
@@ -111,6 +127,9 @@ the hardware itself. Watchonly mirrors the device's review progress. Bowser
 accepts at most 64 inputs, 64 outputs, and 16,384 base64 characters per PSBT.
 Legacy, native SegWit, wrapped SegWit, and BIP86 Taproot accounts are supported.
 Trezor continues to use its native Trezor Connect signing flow.
+
+See the [Bowser integration audit](BOWSER_AUDIT.md) for the reference comparison,
+regression coverage, and remaining device checks.
 
 ### Share PSBT
 

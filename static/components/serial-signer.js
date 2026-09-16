@@ -6,10 +6,16 @@ window.app.component('serial-signer', {
   data: function () {
     return {
       selectedPort: null,
-      writableStreamClosed: null,
+      disconnectHandler: null,
       writer: null,
-      readableStreamClosed: null,
       reader: null,
+      readTask: null,
+      closePromise: null,
+      pairingDialog: null,
+      connected: false,
+      isConnecting: false,
+      connectionAttempt: 0,
+      deviceId: null,
       closingSerialPort: false,
       receivedData: '',
       config: {},
@@ -19,6 +25,12 @@ window.app.component('serial-signer', {
       loginPromise: null,
       loginResolve: null,
       xpubData: {},
+      trng: {
+        running: false,
+        showDialog: false,
+        result: null,
+        error: null
+      },
 
       hww: {
         password: null,
@@ -40,6 +52,7 @@ window.app.component('serial-signer', {
         sendingPsbt: false,
         signingPsbt: false,
         seedWordPosition: 1,
+        seedLoading: false,
         seedWord: null,
         showSeedWord: false,
         showSeedDialog: false,
@@ -65,107 +78,139 @@ window.app.component('serial-signer', {
       this.config = {...HWW_DEFAULT_CONFIG}
       await this.openSerialPort(this.config)
     },
-    openSerialPort: async function (config = {baudRate: 9600}) {
+    openSerialPort: async function (config = HWW_DEFAULT_CONFIG) {
       if (!this.checkSerialPortSupported()) return false
-      if (this.selectedPort) {
-        this.$q.notify({
-          type: 'warning',
-          message: 'Already connected. Disconnect first!',
-          timeout: 10000
-        })
+      if (this.isConnecting || this.closingSerialPort) return false
+      if (this.connected) {
+        if (!this.hww.authenticated) await this.hwwShowPasswordDialog()
         return true
       }
 
+      this.isConnecting = true
+      const attempt = ++this.connectionAttempt
       try {
-        this.selectedPort = await navigator.serial.requestPort()
-        this.selectedPort.addEventListener('connect', event => {
-          // do nothing
-        })
-
-        this.selectedPort.addEventListener('disconnect', () => {
-          this.failPendingCommands(new Error('Serial device disconnected'))
-          this.selectedPort = null
-          this.sharedSecret = null
-          this.decryptionKey = null
-          this.hww.authenticated = false
-          this.$q.notify({
-            type: 'warning',
-            message: 'Disconnected from Serial Port!',
-            timeout: 10000
-          })
-        })
-
-        // Wait for the serial port to open.
-        await this.selectedPort.open(config)
-        // do not await
-        this.startSerialPortReading()
-        // wait to init
+        const port = await navigator.serial.requestPort()
+        if (attempt !== this.connectionAttempt) return false
+        this.selectedPort = port
+        this.disconnectHandler = () => {
+          if (this.selectedPort === port) void this.closeSerialPort()
+        }
+        port.addEventListener('disconnect', this.disconnectHandler)
+        await port.open(config)
+        if (attempt !== this.connectionAttempt) {
+          await port.close()
+          return false
+        }
+        if (!port.readable || !port.writable) {
+          throw new Error('Serial port has no readable or writable stream')
+        }
+        this.reader = port.readable.getReader()
+        this.writer = port.writable.getWriter()
+        this.readTask = this.startSerialPortReading()
         await sleep(1000)
-
-        const textEncoder = new TextEncoderStream()
-        this.writableStreamClosed = textEncoder.readable.pipeTo(
-          this.selectedPort.writable
-        )
-
-        this.writer = textEncoder.writable.getWriter()
-
+        if (this.selectedPort !== port || this.closingSerialPort) {
+          throw new Error('Serial device disconnected')
+        }
         await this.hwwPing()
-
+        await this.hwwPair()
+        if (this.selectedPort !== port || this.closingSerialPort) {
+          throw new Error('Serial device disconnected')
+        }
+        this.connected = true
+        this.$emit('device:connected', 'usb-device')
+        this.$q.notify({
+          type: 'positive',
+          message: 'Paired with device!',
+          timeout: 5000
+        })
         return true
       } catch (error) {
-        this.selectedPort = null
-        this.$q.notify({
-          type: 'warning',
-          message: 'Cannot open serial port!',
-          caption: `${error}`,
-          timeout: 10000
-        })
+        await this.closeSerialPort(false)
+        if (error.name !== 'NotFoundError') {
+          this.$q.notify({
+            type: 'warning',
+            message: 'Cannot connect to Bowser Wallet!',
+            caption: error.message,
+            timeout: 10000
+          })
+        }
         return false
+      } finally {
+        this.isConnecting = false
       }
     },
     openSerialPortConfig: async function () {
       this.config = {...HWW_DEFAULT_CONFIG}
       this.hww.showConfigDialog = true
     },
-    closeSerialPort: async function () {
+    closeSerialPort: function (notify = true) {
+      if (this.closePromise) return this.closePromise
+      this.closePromise = this.releaseSerialPort(notify).finally(() => {
+        this.closePromise = null
+      })
+      return this.closePromise
+    },
+    releaseSerialPort: async function (notify) {
       this.closingSerialPort = true
+      this.connectionAttempt++
+      this.connected = false
+      this.failPendingCommands(new Error('Serial connection closed'))
+      this.pairingDialog?.hide()
+      this.pairingDialog = null
+      const port = this.selectedPort
+      if (port && this.disconnectHandler)
+        port.removeEventListener('disconnect', this.disconnectHandler)
+      this.disconnectHandler = null
       try {
-        if (this.writer) await this.writer.close()
-        if (this.writableStreamClosed) await this.writableStreamClosed
-        if (this.reader) await this.reader.cancel()
-        if (this.readableStreamClosed)
-          await this.readableStreamClosed.catch(() => {
-            /* Ignore the error */
+        // Cancel the read before closing the port, and always release both locks.
+        if (this.reader) await this.reader.cancel().catch(() => {})
+        if (this.readTask) await this.readTask.catch(() => {})
+        else if (this.reader) this.reader.releaseLock()
+        if (this.writer) this.writer.releaseLock()
+        if (port) await port.close()
+        if (notify && port) {
+          this.$q.notify({
+            type: 'positive',
+            message: 'Serial port disconnected!',
+            timeout: 5000
           })
-        if (this.selectedPort) await this.selectedPort.close()
-        this.$q.notify({
-          type: 'positive',
-          message: 'Serial port disconnected!',
-          timeout: 5000
-        })
+        }
       } catch (error) {
-        this.$q.notify({
-          type: 'warning',
-          message: 'Cannot close serial port!',
-          caption: `${error}`,
-          timeout: 10000
-        })
+        if (notify) {
+          this.$q.notify({
+            type: 'warning',
+            message: 'Cannot close serial port!',
+            caption: error.message,
+            timeout: 10000
+          })
+        }
       } finally {
-        this.failPendingCommands(new Error('Serial connection closed'))
         this.selectedPort = null
         this.writer = null
         this.reader = null
-        this.writableStreamClosed = null
-        this.readableStreamClosed = null
+        this.readTask = null
+        this.sharedSecret?.fill(0)
+        this.decryptionKey?.fill(0)
         this.sharedSecret = null
         this.decryptionKey = null
+        this.deviceId = null
+        this.xpubData = {}
+        this.trng.showDialog = false
+        this.trng.result = null
+        this.hww.showPasswordDialog = false
         this.hww.authenticated = false
+        this.hww.password = null
+        this.hww.passphrase = null
+        this.clearSetupSecrets()
+        this.hww.showSeedDialog = false
+        this.hww.showWipeDialog = false
+        this.hww.showRestoreDialog = false
         this.closingSerialPort = false
       }
     },
 
     isConnected: function () {
-      return !!this.selectedPort
+      return this.connected
     },
     isTaprootSupported: function () {
       return true
@@ -203,39 +248,38 @@ window.app.component('serial-signer', {
       return true
     },
     startSerialPortReading: async function () {
-      const port = this.selectedPort
-
-      while (port && port.readable) {
-        const textDecoder = new TextDecoderStream()
-        this.readableStreamClosed = port.readable.pipeTo(textDecoder.writable)
-        this.reader = textDecoder.readable.getReader()
-        const readStringUntil = readFromSerialPort(this.reader)
-
-        try {
-          while (true) {
-            const {value, done} = await readStringUntil('\n')
-            if (value) {
-              const {command, commandData} = await this.extractCommand(value)
-              await this.handleSerialPortResponse(command, commandData)
-              this.updateSerialPortConsole(command)
-            }
-            if (done) {
-              this.failPendingCommands(new Error('Serial device disconnected'))
-              return
-            }
+      const reader = this.reader
+      const decoder = new TextDecoder()
+      let buffered = ''
+      try {
+        while (true) {
+          const {value, done} = await reader.read()
+          if (done || this.closingSerialPort) break
+          buffered += decoder.decode(value, {stream: true})
+          const lines = buffered.split('\n')
+          buffered = lines.pop()
+          for (const line of lines) {
+            if (!line.trim()) continue
+            const {command, commandData} = await this.extractCommand(
+              line.trim()
+            )
+            if (this.closingSerialPort) break
+            await this.handleSerialPortResponse(command, commandData)
+            this.updateSerialPortConsole(command)
           }
-        } catch (error) {
-          this.failPendingCommands(error)
-          if (!this.closingSerialPort && this.selectedPort === port) {
-            this.$q.notify({
-              type: 'warning',
-              message: 'Serial port communication error!',
-              caption: `${error}`,
-              timeout: 10000
-            })
-          }
-          return
         }
+      } catch (error) {
+        if (!this.closingSerialPort) {
+          this.$q.notify({
+            type: 'warning',
+            message: 'Serial port communication error!',
+            caption: error.message,
+            timeout: 10000
+          })
+        }
+      } finally {
+        reader.releaseLock()
+        if (!this.closingSerialPort) void this.closeSerialPort(false)
       }
     },
     handleSerialPortResponse: async function (command, commandData) {
@@ -249,29 +293,15 @@ window.app.component('serial-signer', {
       }
 
       switch (command) {
-        case COMMAND_PING:
-          await this.handlePingResponse(commandData)
-          break
-        case COMMAND_PASSWORD:
-          this.handleLoginResponse(commandData)
-          break
         case COMMAND_PASSWORD_CLEAR:
           this.handleLogoutResponse(commandData)
           break
         case COMMAND_PSBT_REVIEW:
           this.handlePsbtReview(commandData)
           break
-        case COMMAND_WIPE:
-          this.handleWipeResponse(commandData)
-          break
-        case COMMAND_RESTORE:
-          this.handleRestoreResponse(commandData)
-          break
         case COMMAND_SEED:
-          this.handleShowSeedResponse(commandData)
-          break
-        case COMMAND_PAIR:
-          await this.handlePairResponse(commandData)
+          // Hardware buttons can also advance the on-device backup.
+          if (this.hww.showSeedDialog) this.handleShowSeedResponse(commandData)
           break
         case COMMAND_LOG:
           break
@@ -300,69 +330,40 @@ window.app.component('serial-signer', {
       if (textArea) textArea.scrollTop = textArea.scrollHeight
     },
     hwwPing: async function () {
-      try {
-        await this.sendCommandClearText(COMMAND_PING, [window.location.host])
-      } catch (error) {
-        this.$q.notify({
-          type: 'warning',
-          message: 'Failed to ping Hardware Wallet!',
-          caption: `${error}`,
-          timeout: 10000
-        })
+      const res = await this.requestCommand(
+        COMMAND_PING,
+        [window.location.host],
+        20000,
+        false
+      )
+      const [status, deviceId] = res.trim().split(/\s+/)
+      if (status !== '0' || !deviceId) {
+        throw new Error('Bowser Wallet returned an invalid ping response')
       }
-    },
-    handlePingResponse: async function (res = '') {
-      const [status, deviceId] = res.split(' ')
       this.deviceId = deviceId
-
-      if (!this.deviceId) {
-        this.$q.notify({
-          type: 'warning',
-          message: 'Missing device ID for Hardware Wallet',
-          timeout: 10000
-        })
-        return
-      }
-
-      await this.hwwPair()
     },
     hwwShowPasswordDialog: async function () {
+      if (this.loginResolve) return
       this.loginPromise = new Promise(resolve => {
         this.loginResolve = resolve
       })
       this.hww.showPasswordDialog = true
     },
     passwordDialogClosed: function () {
+      if (!this.hww.loggingIn) {
+        this.hww.password = null
+        this.hww.passphrase = null
+      }
       if (!this.hww.loggingIn && this.loginResolve) {
         this.loginResolve(false)
         this.loginResolve = null
       }
     },
     hwwShowWipeDialog: async function () {
-      try {
-        this.hww.showWipeDialog = true
-        await this.sendCommandSecure(COMMAND_WIPE)
-      } catch (error) {
-        this.$q.notify({
-          type: 'warning',
-          message: 'Failed to connect to Hardware Wallet!',
-          caption: `${error}`,
-          timeout: 10000
-        })
-      }
+      this.hww.showWipeDialog = true
     },
     hwwShowRestoreDialog: async function () {
-      try {
-        this.hww.showRestoreDialog = true
-        await this.sendCommandSecure(COMMAND_RESTORE)
-      } catch (error) {
-        this.$q.notify({
-          type: 'warning',
-          message: 'Failed to connect to Hardware Wallet!',
-          caption: `${error}`,
-          timeout: 10000
-        })
-      }
+      this.hww.showRestoreDialog = true
     },
     closeSeedDialog: function () {
       this.hww.seedWord = null
@@ -382,8 +383,7 @@ window.app.component('serial-signer', {
     },
     hwwConfigAndConnect: async function () {
       this.hww.showConfigDialog = false
-      await this.openSerialPort(this.config)
-      return true
+      return this.openSerialPort(this.config)
     },
     hwwLogin: async function () {
       if (this.hww.loggingIn) return
@@ -439,7 +439,9 @@ window.app.component('serial-signer', {
     },
     hwwLogout: async function () {
       try {
-        await this.sendCommandSecure(COMMAND_PASSWORD_CLEAR)
+        const response = await this.requestCommand(COMMAND_PASSWORD_CLEAR)
+        if (response.trim() !== '1') throw new Error('Logout was not confirmed')
+        this.handleLogoutResponse(response)
       } catch (error) {
         this.$q.notify({
           type: 'warning',
@@ -451,15 +453,18 @@ window.app.component('serial-signer', {
     },
     hwwShowAddress: async function (path, address) {
       try {
-        await this.sendCommandSecure(COMMAND_ADDRESS, [
+        const response = await this.requestCommand(COMMAND_ADDRESS, [
           getSigningNetwork(this.network),
           path,
           address
         ])
+        const [status, derivedAddress] = response.trim().split(/\s+/)
+        if (status !== '1' || derivedAddress !== address)
+          throw new Error('The address returned by Bowser Wallet did not match')
       } catch (error) {
         this.$q.notify({
           type: 'warning',
-          message: 'Failed to logout from Hardware Wallet!',
+          message: 'Failed to verify address on Bowser Wallet!',
           caption: `${error}`,
           timeout: 10000
         })
@@ -497,14 +502,14 @@ window.app.component('serial-signer', {
           psbtBase64.length
         ])
         if (started !== `1 ${count}`)
-          throw new Error(`PSBT transfer refused: ${started}`)
+          throw new Error('Bowser Wallet refused the PSBT transfer')
         for (let index = 0; index < count; index++) {
           const response = await this.requestCommand(COMMAND_PSBT_CHUNK, [
             index,
             psbtBase64.slice(index * 64, (index + 1) * 64)
           ])
           if (response !== `1 ${index}`)
-            throw new Error(`PSBT chunk rejected: ${response}`)
+            throw new Error('Bowser Wallet rejected a PSBT chunk')
         }
         this.hww.confirm.stage = 'review'
         const reviewed = await this.requestCommand(
@@ -512,7 +517,8 @@ window.app.component('serial-signer', {
           [],
           15 * 60000
         )
-        if (reviewed !== '1') throw new Error(`PSBT review failed: ${reviewed}`)
+        if (reviewed !== '1')
+          throw new Error('Bowser Wallet did not approve the PSBT')
         this.hww.sendingPsbt = false
         await this.hwwSignPsbt()
       } finally {
@@ -541,13 +547,13 @@ window.app.component('serial-signer', {
       this.hww.signingPsbt = true
       this.hww.confirm.stage = 'sign'
       const res = await this.requestCommand(COMMAND_SIGN_PSBT, [], 120000)
-      const [count, psbt] = res.trim().split(' ')
+      const [count, psbt] = res.trim().split(/\s+/)
       if (
         !/^\d+$/.test(count) ||
         +count < 1 ||
         !psbt?.startsWith(PSBT_BASE64_PREFIX)
       ) {
-        throw new Error(`PSBT signing failed: ${res}`)
+        throw new Error('Bowser Wallet did not return a signed PSBT')
       }
       this.updateSignedPsbt(psbt)
       this.$q.notify({
@@ -558,93 +564,58 @@ window.app.component('serial-signer', {
       })
     },
     hwwPair: async function () {
-      try {
-        this.decryptionKey = nobleSecp256k1.utils.randomPrivateKey()
-        const publicKey = nobleSecp256k1.Point.fromPrivateKey(
-          this.decryptionKey
-        )
-        const publicKeyHex = publicKey.toHex().slice(2)
-
-        await this.sendCommandClearText(COMMAND_PAIR, [publicKeyHex])
-        this.$q.notify({
-          type: 'positive',
-          message: 'Pairing started!',
-          timeout: 5000
-        })
-      } catch (error) {
-        this.$q.notify({
-          type: 'warning',
-          message: 'Failed to pair with device!',
-          caption: `${error}`,
-          timeout: 10000
-        })
+      this.decryptionKey = nobleSecp256k1.utils.randomPrivateKey()
+      const publicKeyHex = nobleSecp256k1.Point.fromPrivateKey(
+        this.decryptionKey
+      )
+        .toHex(false)
+        .slice(2)
+      const res = await this.requestCommand(
+        COMMAND_PAIR,
+        [publicKeyHex],
+        20000,
+        false
+      )
+      const [status, pubKeyHex] = res.trim().split(/\s+/)
+      if (status !== '0') {
+        if (pubKeyHex === 'connection_period_expired') {
+          throw new Error(
+            'Restart Bowser Wallet and connect during the startup countdown.'
+          )
+        }
+        if (pubKeyHex === 'rng_failure') {
+          throw new Error(
+            'Device hardware RNG health check failed. Pairing refused.'
+          )
+        }
+        throw new Error('Device refused pairing')
       }
-    },
-    handlePairResponse: async function (res = '') {
-      const [statusCode, data] = res.trim().split(' ')
-      let pubKeyHex, errorMessage, captionMessage
-      switch (statusCode) {
-        case '0':
-          pubKeyHex = data
-          if (!data) errorMessage = 'Failed to exchange DH secret!'
-          break
-        case '1':
-          if (data === 'connection_period_expired') {
-            errorMessage =
-              'Device pairing only possible during the startup countdown!'
-            captionMessage = 'Restart the device and try again'
-          } else if (data === 'rng_failure') {
-            errorMessage = 'Device hardware RNG health check failed!'
-            captionMessage = 'Pairing was safely refused by the device'
-          } else {
-            errorMessage = 'Device refused pairing'
-            captionMessage = data || 'Unknown device error'
-          }
-          break
-
-        default:
-          errorMessage = 'Unexpected error code'
-          break
-      }
-
-      if (errorMessage) {
-        this.$q.notify({
-          type: 'warning',
-          message: errorMessage,
-          caption: captionMessage || '',
-          timeout: 10000
-        })
-        this.closeSerialPort()
-        return
+      if (!/^[0-9a-f]{128}$/i.test(pubKeyHex || '')) {
+        throw new Error('Invalid device pairing key')
       }
       const hwwPublicKey = nobleSecp256k1.Point.fromHex('04' + pubKeyHex)
-
       this.sharedSecret = nobleSecp256k1
-        .getSharedSecret(this.decryptionKey, hwwPublicKey)
+        .getSharedSecret(this.decryptionKey, hwwPublicKey, false)
         .slice(1, 33)
-
       const sharedSecretHex = nobleSecp256k1.utils.bytesToHex(this.sharedSecret)
-      const sharedSecredHash = await nobleSecp256k1.utils.sha256(
+      const sharedSecretHash = await nobleSecp256k1.utils.sha256(
         asciiToUint8Array(sharedSecretHex)
       )
       const fingerprint = nobleSecp256k1.utils
-        .bytesToHex(sharedSecredHash)
+        .bytesToHex(sharedSecretHash)
         .substring(0, 5)
         .toUpperCase()
-
-      LNbits.utils
-        .confirmDialog('Confirm code from display: ' + fingerprint)
-        .onOk(() => {
-          this.$emit('device:connected', 'usb-device')
-          this.$q.notify({
-            type: 'positive',
-            message: 'Paired with device!',
-            timeout: 5000
-          })
-        })
-        .onCancel(() => {
-          this.closeSerialPort()
-        })
+      if (!this.selectedPort || this.closingSerialPort) {
+        throw new Error('Serial device disconnected')
+      }
+      const confirmed = await new Promise(resolve => {
+        this.pairingDialog = LNbits.utils
+          .confirmDialog('Confirm code from display: ' + fingerprint)
+          .onOk(() => resolve(true))
+          .onDismiss(() => resolve(false))
+      })
+      this.pairingDialog = null
+      if (!confirmed) throw new Error('Pairing code was not confirmed')
     },
     hwwHelp: async function () {
       try {
@@ -663,10 +634,32 @@ window.app.component('serial-signer', {
         })
       }
     },
+    clearSetupSecrets: function () {
+      this.hww.password = null
+      this.hww.confirmedPassword = null
+      this.hww.mnemonic = null
+      this.hww.showPassword = false
+      this.hww.showMnemonic = false
+    },
+    validateNewPassword: function () {
+      const password = this.hww.password || ''
+      if (password.length < 8 || /\s/.test(password))
+        throw new Error(
+          'Use a password of at least 8 characters without spaces'
+        )
+      if (password !== this.hww.confirmedPassword)
+        throw new Error('Passwords do not match')
+    },
     hwwWipe: async function () {
       try {
+        this.validateNewPassword()
         this.hww.showWipeDialog = false
-        await this.sendCommandSecure(COMMAND_WIPE, [this.hww.password])
+        const response = await this.requestCommand(
+          COMMAND_WIPE,
+          [this.hww.password],
+          60000
+        )
+        await this.handleWipeResponse(response)
       } catch (error) {
         this.$q.notify({
           type: 'warning',
@@ -680,7 +673,7 @@ window.app.component('serial-signer', {
         this.hww.showPassword = false
       }
     },
-    handleWipeResponse: function (res = '') {
+    handleWipeResponse: async function (res = '') {
       const wiped = res.trim() === '1'
       this.hww.authenticated = wiped
       if (wiped) {
@@ -690,6 +683,7 @@ window.app.component('serial-signer', {
           message: 'Wallet wiped!',
           timeout: 10000
         })
+        await this.hwwShowSeed()
       } else {
         this.$q.notify({
           type: 'warning',
@@ -698,15 +692,78 @@ window.app.component('serial-signer', {
         })
       }
     },
+    hwwTestTrng: async function () {
+      if (
+        !this.connected ||
+        this.trng.running ||
+        this.hww.loggingIn ||
+        this.hww.sendingPsbt ||
+        this.hww.signingPsbt
+      )
+        return
+      this.trng.running = true
+      this.trng.showDialog = true
+      this.trng.result = null
+      this.trng.error = null
+      try {
+        const response = await this.requestCommand(COMMAND_TRNG, [], 60000)
+        const [
+          status,
+          sampleCount,
+          statistic,
+          minimum,
+          maximum,
+          verdict,
+          ...rest
+        ] = response.trim().split(/\s+/)
+        const samples = Number(sampleCount)
+        const chiSquared = Number(statistic)
+        const minimumCount = Number(minimum)
+        const maximumCount = Number(maximum)
+        if (
+          status !== '1' ||
+          rest.length !== 0 ||
+          !Number.isInteger(samples) ||
+          samples !== 5000 ||
+          !Number.isFinite(chiSquared) ||
+          chiSquared < 0 ||
+          !Number.isInteger(minimumCount) ||
+          minimumCount < 0 ||
+          !Number.isInteger(maximumCount) ||
+          maximumCount < minimumCount ||
+          maximumCount > samples ||
+          (verdict !== 'healthy' && verdict !== 'unexpected')
+        ) {
+          throw new Error(
+            'Bowser Wallet did not complete the TRNG visual check'
+          )
+        }
+        this.trng.result = {
+          samples,
+          chiSquared,
+          minimumCount,
+          maximumCount,
+          looksHealthy: verdict === 'healthy'
+        }
+      } catch (error) {
+        this.trng.error = error.message
+      } finally {
+        this.trng.running = false
+      }
+    },
     hwwXpub: async function (path) {
       this.xpubData = {}
       const res = await this.requestCommand(COMMAND_XPUB, [
         getSigningNetwork(this.network),
         path
       ])
-      const args = res.trim().split(' ')
-      if (args.length < 3 || args[0].trim() !== '1') {
-        throw new Error(`Failed to fetch XPub: ${res}`)
+      const args = res.trim().split(/\s+/)
+      if (
+        args.length !== 3 ||
+        args[0] !== '1' ||
+        !/^[0-9a-f]{8}$/i.test(args[2])
+      ) {
+        throw new Error('Bowser Wallet did not return a valid XPub response')
       }
       const xpub = args[1].trim()
       const fingerprint = args[2].trim()
@@ -714,11 +771,23 @@ window.app.component('serial-signer', {
     },
 
     hwwShowSeed: async function () {
+      if (this.hww.seedLoading) return
+      this.hww.showSeedDialog = true
+      await this.requestSeedWord(1)
+    },
+    requestSeedWord: async function (position) {
+      if (this.hww.seedLoading) return
+      this.hww.seedLoading = true
       try {
-        this.hww.showSeedDialog = true
-        this.hww.seedWordPosition = 1
-
-        await this.sendCommandSecure(COMMAND_SEED, [this.hww.seedWordPosition])
+        const response = await this.requestCommand(
+          COMMAND_SEED,
+          [position],
+          12000
+        )
+        if (this.hww.showSeedDialog && !this.handleShowSeedResponse(response))
+          throw new Error(
+            'Bowser Wallet did not confirm on-device seed display'
+          )
       } catch (error) {
         this.$q.notify({
           type: 'warning',
@@ -726,34 +795,42 @@ window.app.component('serial-signer', {
           caption: `${error}`,
           timeout: 10000
         })
+      } finally {
+        this.hww.seedLoading = false
       }
     },
     showNextSeedWord: async function () {
-      this.hww.seedWordPosition++
-      await this.sendCommandSecure(COMMAND_SEED, [this.hww.seedWordPosition])
+      await this.requestSeedWord(Math.min(24, this.hww.seedWordPosition + 1))
     },
     showPrevSeedWord: async function () {
-      this.hww.seedWordPosition = Math.max(1, this.hww.seedWordPosition - 1)
-      await this.sendCommandSecure(COMMAND_SEED, [this.hww.seedWordPosition])
+      await this.requestSeedWord(Math.max(1, this.hww.seedWordPosition - 1))
     },
     handleShowSeedResponse: function (res = '') {
-      const [pos, status] = res.trim().split(' ')
+      const [pos, status, ...rest] = res.trim().split(/\s+/)
       this.hww.seedWord = null
       if (
         status === 'displayed' &&
+        rest.length === 0 &&
         /^\d+$/.test(pos) &&
         +pos >= 1 &&
         +pos <= 24
       ) {
         this.hww.seedWordPosition = +pos
+        return true
       }
+      return false
     },
     hwwRestore: async function () {
       try {
-        await this.sendCommandSecure(COMMAND_RESTORE, [
-          this.hww.password,
-          this.hww.mnemonic
-        ])
+        this.validateNewPassword()
+        if (!this.hww.mnemonic?.trim())
+          throw new Error('Enter the recovery words')
+        const response = await this.requestCommand(
+          COMMAND_RESTORE,
+          [this.hww.password, this.hww.mnemonic],
+          60000
+        )
+        this.handleRestoreResponse(response)
       } catch (error) {
         this.$q.notify({
           type: 'warning',
@@ -786,13 +863,20 @@ window.app.component('serial-signer', {
       this.$emit('signed:psbt', value)
     },
 
-    requestCommand: function (command, attrs = [], timeout = 20000) {
-      if (this.pendingCommands[command])
-        return Promise.reject(new Error(`${command} is already pending`))
+    requestCommand: function (
+      command,
+      attrs = [],
+      timeout = 20000,
+      secure = true
+    ) {
+      if (Object.keys(this.pendingCommands).length)
+        return Promise.reject(
+          new Error('A device operation is already pending')
+        )
       return new Promise((resolve, reject) => {
         const fail = error => {
           const pending = this.pendingCommands[command]
-          if (!pending) return
+          if (!pending || pending.resolve !== resolve) return
           clearTimeout(pending.timer)
           delete this.pendingCommands[command]
           reject(error)
@@ -802,7 +886,8 @@ window.app.component('serial-signer', {
           timeout
         )
         this.pendingCommands[command] = {resolve, reject, timer}
-        this.sendCommandSecure(command, attrs).catch(fail)
+        const send = secure ? this.sendCommandSecure : this.sendCommandClearText
+        send(command, attrs).catch(fail)
       })
     },
     failPendingCommands: function (error) {
@@ -820,6 +905,11 @@ window.app.component('serial-signer', {
     },
 
     sendCommandSecure: async function (command, attrs = []) {
+      if (!this.connected || !this.writer) {
+        throw new Error(
+          'Connect and confirm the Bowser Wallet pairing code first'
+        )
+      }
       const message = [command].concat(attrs).join(' ')
       const iv = window.crypto.getRandomValues(new Uint8Array(16))
       if (!this.sharedSecret || !this.sharedSecret.length) {
@@ -835,11 +925,13 @@ window.app.component('serial-signer', {
 
       const encryptedHex = nobleSecp256k1.utils.bytesToHex(encrypted)
       const encryptedIvHex = nobleSecp256k1.utils.bytesToHex(iv)
-      await this.writer.write(encryptedHex + encryptedIvHex + '\n')
+      await this.writer.write(
+        new TextEncoder().encode(encryptedHex + encryptedIvHex + '\n')
+      )
     },
     sendCommandClearText: async function (command, attrs = []) {
       const message = [command].concat(attrs).join(' ')
-      await this.writer.write(message + '\n')
+      await this.writer.write(new TextEncoder().encode(message + '\n'))
     },
     extractCommand: async function (value) {
       const command = value.split(' ')[0]
@@ -921,6 +1013,9 @@ window.app.component('serial-signer', {
       const decryptedBytes = aesCbc.decrypt(encryptedBytes)
       return decryptedBytes
     }
+  },
+  beforeUnmount: function () {
+    void this.closeSerialPort(false)
   },
   created: async function () {
     window.localStorage.removeItem('lnbits-paired-devices')

@@ -1,3 +1,4 @@
+from io import BytesIO
 from typing import Any
 
 import wallycore as wally
@@ -188,10 +189,73 @@ def psbt_fee(psbt: Any) -> int:
     return amount - wally.tx_get_total_output_satoshi(tx)
 
 
+def combine_matching_psbt(expected: Any, signed: Any) -> Any:
+    def unsigned_transaction(psbt: Any) -> str:
+        # Final scripts must not participate in the transaction comparison.
+        normalized = wally.psbt_clone(psbt, 0)
+        wally.psbt_set_version(normalized, 0, 0)
+        tx = wally.psbt_get_global_tx(normalized)
+        return wally.tx_to_hex(tx, 0)
+
+    if unsigned_transaction(expected) != unsigned_transaction(signed):
+        raise ValueError("Signed PSBT does not match the transaction under review")
+    wally.psbt_combine(expected, signed)
+    return expected
+
+
+def _input_partial_signatures(psbt: Any) -> list[dict[bytes, bytes]]:
+    # The Python Wally bindings expose signature values but not their public
+    # keys. Read those keys from Wally's validated, canonical serialization.
+    stream = BytesIO(bytes(wally.psbt_to_bytes(psbt, 0)))
+    stream.read(5)  # PSBT magic
+
+    def read_exact(size: int) -> bytes:
+        value = stream.read(size)
+        if len(value) != size:
+            raise ValueError("Invalid PSBT map")
+        return value
+
+    def compact_size() -> int:
+        prefix = read_exact(1)[0]
+        if prefix < 253:
+            return prefix
+        return int.from_bytes(read_exact({253: 2, 254: 4, 255: 8}[prefix]), "little")
+
+    def read_map() -> dict[bytes, bytes]:
+        entries = {}
+        while size := compact_size():
+            key = read_exact(size)
+            entries[key] = read_exact(compact_size())
+        return entries
+
+    read_map()  # Global map
+    return [
+        {key[1:]: value for key, value in read_map().items() if key[0] == 2}
+        for _ in range(wally.psbt_get_num_inputs(psbt))
+    ]
+
+
 def finalize_signed_psbt(psbt: Any) -> Any:
     # Finalization assembles witnesses; it does not verify signatures.
     verification = wally.psbt_clone(psbt, 0)
     tx = wally.psbt_extract(verification, wally.WALLY_PSBT_EXTRACT_NON_FINAL)
+    for index, signatures in enumerate(_input_partial_signatures(verification)):
+        if not signatures:
+            continue
+        script = wally.psbt_get_input_signing_script(verification, index)
+        scriptcode = wally.psbt_get_input_scriptcode(verification, index, script)
+        for pubkey, signature in signatures.items():
+            if not signature or signature[-1] not in (1, 2, 3, 0x81, 0x82, 0x83):
+                raise ValueError("Invalid ECDSA sighash")
+            wally.psbt_set_input_sighash(verification, index, signature[-1])
+            digest = wally.psbt_get_input_signature_hash(
+                verification, index, tx, scriptcode, 0
+            )
+            try:
+                compact = wally.ec_sig_from_der(signature[:-1])
+                wally.ec_sig_verify(pubkey, digest, wally.EC_FLAG_ECDSA, compact)
+            except ValueError as exc:
+                raise ValueError("Invalid ECDSA signature") from exc
     for index in range(wally.psbt_get_num_inputs(verification)):
         signature = bytes(wally.psbt_get_input_taproot_signature(verification, index))
         if not signature:

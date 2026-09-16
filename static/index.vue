@@ -1939,6 +1939,7 @@
             color="secondary"
             class="float-left"
             @click="broadcastTransaction"
+            :disable="!signedTxHex || showChecking"
             v-text="$t('watchonly.send')"
           ></q-btn>
           <q-btn
@@ -1962,13 +1963,15 @@
       color="primary"
       icon="usb"
       :text-color="
-        selectedPort ? (hww.authenticated ? 'green' : 'orange') : 'white'
+        connected ? (hww.authenticated ? 'green' : 'orange') : 'white'
       "
+      :loading="isConnecting"
+      :disable="closingSerialPort"
       @click="openSerialPortDialog"
     >
       <q-list>
         <q-item
-          v-if="selectedPort && !hww.authenticated"
+          v-if="connected && !hww.authenticated"
           clickable
           v-close-popup
           @click="hwwShowPasswordDialog()"
@@ -2027,7 +2030,7 @@
         </q-item>
 
         <q-item
-          v-if="selectedPort"
+          v-if="connected"
           clickable
           v-close-popup
           @click="hwwShowRestoreDialog()"
@@ -2051,7 +2054,7 @@
           </q-item-section>
         </q-item>
         <q-item
-          v-if="selectedPort"
+          v-if="connected"
           @click="hwwShowWipeDialog()"
           clickable
           v-close-popup
@@ -2062,7 +2065,24 @@
             </q-item-label>
           </q-item-section>
         </q-item>
-        <q-item v-if="selectedPort" @click="hwwHelp()" clickable v-close-popup>
+        <q-item
+          v-if="connected"
+          :disable="
+            trng.running || hww.loggingIn || hww.sendingPsbt || hww.signingPsbt
+          "
+          @click="hwwTestTrng()"
+          clickable
+          v-close-popup
+        >
+          <q-item-section>
+            <q-item-label v-text="$t('watchonly.trng_check')"></q-item-label>
+            <q-item-label
+              caption
+              v-text="$t('watchonly.trng_check_desc')"
+            ></q-item-label>
+          </q-item-section>
+        </q-item>
+        <q-item v-if="connected" @click="hwwHelp()" clickable v-close-popup>
           <q-item-section>
             <q-item-label v-text="$t('watchonly.help')"></q-item-label>
             <q-item-label
@@ -2085,6 +2105,88 @@
         </q-item>
       </q-list>
     </q-btn-dropdown>
+
+    <q-dialog
+      v-model="trng.showDialog"
+      :persistent="trng.running"
+      position="top"
+    >
+      <q-card class="q-pa-lg lnbits__dialog-card">
+        <div class="text-h6 q-mb-md" v-text="$t('watchonly.trng_result')"></div>
+        <div v-if="trng.running" class="row items-center q-gutter-sm">
+          <q-spinner color="primary" size="2em"></q-spinner>
+          <span v-text="$t('watchonly.trng_running')"></span>
+        </div>
+        <template v-else-if="trng.result">
+          <q-banner
+            :class="
+              trng.result.looksHealthy
+                ? 'bg-positive text-white'
+                : 'bg-warning text-black'
+            "
+          >
+            <span
+              v-text="
+                $t(
+                  trng.result.looksHealthy
+                    ? 'watchonly.trng_healthy'
+                    : 'watchonly.trng_unexpected'
+                )
+              "
+            ></span>
+          </q-banner>
+          <div class="q-markup-table q-my-md bg-transparent">
+            <table class="q-table">
+              <tbody>
+                <tr>
+                  <td v-text="$t('watchonly.trng_samples')"></td>
+                  <td v-text="trng.result.samples"></td>
+                </tr>
+                <tr>
+                  <td v-text="$t('watchonly.trng_expected')"></td>
+                  <td>50</td>
+                </tr>
+                <tr>
+                  <td v-text="$t('watchonly.trng_range')"></td>
+                  <td
+                    v-text="
+                      trng.result.minimumCount + '–' + trng.result.maximumCount
+                    "
+                  ></td>
+                </tr>
+                <tr>
+                  <td v-text="$t('watchonly.trng_chi_squared')"></td>
+                  <td v-text="trng.result.chiSquared.toFixed(2)"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p
+            class="text-weight-bold"
+            v-text="$t('watchonly.trng_interval')"
+          ></p>
+          <p v-text="$t('watchonly.trng_thresholds')"></p>
+          <p v-text="$t('watchonly.trng_limit')"></p>
+          <p v-text="$t('watchonly.trng_continue')"></p>
+        </template>
+        <template v-else-if="trng.error">
+          <q-banner class="bg-warning text-black">
+            <span v-text="$t('watchonly.trng_failed')"></span>
+            <div v-text="trng.error"></div>
+          </q-banner>
+          <p class="q-mt-md" v-text="$t('watchonly.trng_firmware')"></p>
+        </template>
+        <div class="row justify-end q-mt-md">
+          <q-btn
+            v-close-popup
+            flat
+            color="grey"
+            :disable="trng.running"
+            :label="$t('watchonly.close')"
+          ></q-btn>
+        </div>
+      </q-card>
+    </q-dialog>
 
     <q-dialog v-model="hww.showConfigDialog" position="top">
       <q-card class="q-pa-lg q-pt-xl lnbits__dialog-card">
@@ -2138,12 +2240,13 @@
           ></q-toggle>
           <q-input
             v-if="hww.hasPassphrase"
-            v-model.trim="hww.passphrase"
+            v-model="hww.passphrase"
             filled
             :type="hww.showPassphrase ? 'text' : 'password'"
             filled
             dense
             :label="$t('watchonly.passphrase')"
+            :hint="$t('watchonly.passphrase_hint')"
           >
             <template v-slot:append>
               <q-icon
@@ -2160,7 +2263,7 @@
             <q-btn
               unelevated
               color="primary"
-              :disable="!selectedPort"
+              :disable="!connected"
               :loading="hww.loggingIn"
               type="submit"
               v-text="$t('watchonly.login')"
@@ -2254,7 +2357,11 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="hww.showWipeDialog" position="top">
+    <q-dialog
+      v-model="hww.showWipeDialog"
+      @hide="clearSetupSecrets"
+      position="top"
+    >
       <q-card class="q-pa-lg q-pt-xl lnbits__dialog-card">
         <q-form @submit="hwwWipe" class="q-gutter-md">
           <q-badge
@@ -2393,6 +2500,7 @@
               unelevated
               color="primary"
               @click="showPrevSeedWord"
+              :disable="hww.seedLoading"
               v-text="$t('watchonly.prev')"
             ></q-btn>
           </div>
@@ -2402,6 +2510,7 @@
               unelevated
               color="primary"
               @click="showNextSeedWord"
+              :disable="hww.seedLoading"
               v-text="$t('watchonly.next')"
             ></q-btn>
           </div>
@@ -2418,7 +2527,11 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="hww.showRestoreDialog" position="top">
+    <q-dialog
+      v-model="hww.showRestoreDialog"
+      @hide="clearSetupSecrets"
+      position="top"
+    >
       <q-card class="q-pa-lg q-pt-xl lnbits__dialog-card">
         <q-form @submit="hwwRestore" class="q-gutter-md">
           <q-badge

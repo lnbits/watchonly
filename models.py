@@ -1,5 +1,5 @@
 from fastapi import Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CreateWallet(BaseModel):
@@ -71,9 +71,15 @@ class SerializedTransaction(BaseModel):
 
 
 class ExtractPsbt(BaseModel):
-    psbt_base64 = ""
+    psbt_base64: str = Field(..., alias="psbtBase64", min_length=1)
+    expected_psbt_base64: str | None = Field(
+        None, alias="expectedPsbtBase64", min_length=1
+    )
     inputs: list[SerializedTransaction]
     network = "Mainnet"
+
+    class Config:
+        allow_population_by_field_name = True
 
 
 class ExtractTx(BaseModel):

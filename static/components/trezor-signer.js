@@ -15,9 +15,12 @@ window.app.component('trezor-signer', {
 
   methods: {
     connectToDevice: async function () {
+      if (this.isConnecting) return
       try {
         this.isConnecting = true
         this.features = await TrezorConnect.getFeatures()
+        if (!this.features.success)
+          throw new Error('Trezor connection was cancelled or failed')
         this.featuresJson = JSON.stringify(this.features, null, 2)
         this.showFeatures = true
         this.connected = true
@@ -36,7 +39,7 @@ window.app.component('trezor-signer', {
     isTaprootSupported: function () {
       return true
     },
-    isAuthenticated: async function () {
+    isAuthenticated: function () {
       return true
     },
     hwwXpub: async function (accountPath) {
@@ -51,7 +54,7 @@ window.app.component('trezor-signer', {
       }
       this.xpubData = {
         xpub: data.payload.xpub,
-        fingerprint: data.payload.fingerprint.toString(16)
+        fingerprint: data.payload.fingerprint.toString(16).padStart(8, '0')
       }
     },
     isFetchingXpub: async function () {

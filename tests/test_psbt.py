@@ -5,15 +5,69 @@ from unittest.mock import AsyncMock
 
 import pytest
 import wallycore as wally
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException
+from httpx import ASGITransport, AsyncClient
 
 from .. import views_api
 from ..helpers import address_script, descriptor_script, parse_key, script_address
 from ..models import CreatePsbt, ExtractPsbt, ExtractTx
-from ..psbt import create_psbt, finalize_signed_psbt, psbt_fee
+from ..psbt import (
+    _input_partial_signatures,
+    combine_matching_psbt,
+    create_psbt,
+    finalize_signed_psbt,
+    psbt_fee,
+)
 
 # Captured before the migration, using only deterministic public test seeds.
 VECTORS = json.loads(Path(__file__).with_name("bitcoin_vectors.json").read_text())
+
+
+@pytest.fixture
+def psbt_api_app():
+    async def authenticated():
+        return None
+
+    app = FastAPI()
+    app.include_router(views_api.watchonly_api_router, prefix="/watchonly")
+    app.dependency_overrides[views_api.require_watchonly_admin_account] = authenticated
+    return app
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("field", ["psbtBase64", "psbt_base64"])
+@pytest.mark.parametrize("kind", ["pkh", "sh", "wpkh", "tr"])
+@pytest.mark.parametrize("network", ["Mainnet", "Testnet", "Testnet4"])
+async def test_extract_http_accepts_browser_and_python_field_names(
+    psbt_api_app, field, kind, network
+):
+    vector = signing_vector(kind, "main" if network == "Mainnet" else "test")
+    async with AsyncClient(
+        transport=ASGITransport(app=psbt_api_app), base_url="http://test"
+    ) as client:
+        response = await client.put(
+            "/watchonly/api/v1/psbt/extract",
+            json={
+                field: vector["signed"],
+                "inputs": [{"tx_hex": vector["data"]["inputs"][0]["tx_hex"]}],
+                "network": network,
+            },
+        )
+    assert response.status_code == 200, response.text
+    assert response.json()["tx_hex"] == vector["tx_hex"]
+    assert json.loads(response.json()["tx_json"])["fee"] == 1000
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("payload", [{}, {"psbtBase64": ""}, {"psbt_base64": ""}])
+async def test_extract_http_rejects_missing_or_empty_psbt(psbt_api_app, payload):
+    async with AsyncClient(
+        transport=ASGITransport(app=psbt_api_app), base_url="http://test"
+    ) as client:
+        response = await client.put(
+            "/watchonly/api/v1/psbt/extract", json={**payload, "inputs": []}
+        )
+    assert response.status_code == 422
 
 
 def signing_vector(kind="wpkh", network="test"):
@@ -34,6 +88,72 @@ def signing_data(kind="wpkh", network="test"):
     )
     data = CreatePsbt(**signing_vector(kind, network)["data"])
     return root, data.masterpubs[0].public_key, data
+
+
+@pytest.mark.parametrize("kind", ["pkh", "sh", "wpkh"])
+@pytest.mark.parametrize("sighash", [1, 2, 3, 0x81, 0x82, 0x83])
+def test_ecdsa_signatures_are_verified_before_finalizing(kind, sighash):
+    root, _, data = signing_data(kind)
+    psbt = create_psbt(data)
+    wally.psbt_set_input_sighash(psbt, 0, sighash)
+    wally.psbt_sign_bip32(psbt, root, 0)
+    assert finalize_signed_psbt(wally.psbt_clone(psbt, 0))
+    pubkey, signature = next(iter(_input_partial_signatures(psbt)[0].items()))
+    corrupt = signature[:-2] + bytes([signature[-2] ^ 1, signature[-1]])
+    wally.psbt_set_input_signatures(psbt, 0, wally.map_from_dict({pubkey: corrupt}))
+    with pytest.raises(ValueError, match="Invalid ECDSA signature"):
+        finalize_signed_psbt(psbt)
+
+
+@pytest.mark.parametrize("kind", ["pkh", "sh", "wpkh", "tr"])
+@pytest.mark.parametrize("finalized", [False, True])
+def test_matching_psbt_preserves_transaction_and_combines_metadata(kind, finalized):
+    vector = signing_vector(kind)
+    expected = wally.psbt_from_base64(vector["unsigned"], 0)
+    signed = wally.psbt_from_base64(vector["signed"], 0)
+    if finalized:
+        wally.psbt_finalize(signed, 0)
+    combined = combine_matching_psbt(expected, signed)
+    tx = finalize_signed_psbt(combined)
+    assert wally.tx_to_hex(tx, wally.WALLY_TX_FLAG_USE_WITNESS) == vector["tx_hex"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "mutation", ["amount", "address", "sequence", "outpoint", "version", "locktime"]
+)
+async def test_extract_rejects_different_reviewed_transaction(psbt_api_app, mutation):
+    vector = signing_vector()
+    expected = wally.psbt_from_base64(vector["unsigned"], 0)
+    raw = bytearray(wally.tx_to_bytes(wally.psbt_get_global_tx(expected), 0))
+    # This deterministic vector has one input and two outputs.
+    offsets = {
+        "version": 0,
+        "outpoint": 5,
+        "sequence": 42,
+        "amount": 47,
+        "address": 57,
+        "locktime": len(raw) - 4,
+    }
+    raw[offsets[mutation]] ^= 1
+    altered = wally.psbt_init(0, 1, 2, 0, 0)
+    wally.psbt_set_global_tx(altered, wally.tx_from_bytes(raw, 0))
+    async with AsyncClient(
+        transport=ASGITransport(app=psbt_api_app), base_url="http://test"
+    ) as client:
+        response = await client.put(
+            "/watchonly/api/v1/psbt/extract",
+            json={
+                "psbtBase64": vector["signed"],
+                "expectedPsbtBase64": wally.psbt_to_base64(altered, 0),
+                "inputs": [],
+            },
+        )
+    assert response.status_code == 400
+    assert (
+        response.json()["detail"]
+        == "Signed PSBT does not match the transaction under review"
+    )
 
 
 @pytest.mark.parametrize(
