@@ -111,7 +111,7 @@ window.app.component('serial-signer', {
         // do not await
         this.startSerialPortReading()
         // wait to init
-        sleep(1000)
+        watchonlySleep(1000)
 
         const textEncoder = new TextEncoderStream()
         this.writableStreamClosed = textEncoder.readable.pipeTo(
