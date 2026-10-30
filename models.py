@@ -71,27 +71,27 @@ class SerializedTransaction(BaseModel):
 
 
 class ExtractPsbt(BaseModel):
-    psbt_base64 = ""
+    psbt_base64: str = ""
     inputs: list[SerializedTransaction]
-    network = "Mainnet"
+    network: str = "Mainnet"
 
 
 class ExtractTx(BaseModel):
-    tx_hex = ""
-    network = "Mainnet"
+    tx_hex: str = ""
+    network: str = "Mainnet"
 
 
 class SignedTransaction(BaseModel):
-    tx_hex: str | None
-    tx_json: str | None
+    tx_hex: str | None = None
+    tx_json: str | None = None
 
 
 class Config(BaseModel):
-    mempool_endpoint = "https://mempool.space"
-    receive_gap_limit = 20
-    change_gap_limit = 5
-    sats_denominated = True
-    network = "Mainnet"
+    mempool_endpoint: str = "https://mempool.space"
+    receive_gap_limit: int = 20
+    change_gap_limit: int = 5
+    sats_denominated: bool = True
+    network: str = "Mainnet"
 
 
 class ConfigDb(BaseModel):
