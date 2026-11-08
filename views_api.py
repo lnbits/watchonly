@@ -1,7 +1,6 @@
 import json
 from http import HTTPStatus
 
-import httpx
 from embit import finalizer, script
 from embit.ec import PublicKey
 from embit.networks import NETWORKS
@@ -9,6 +8,7 @@ from embit.psbt import PSBT, DerivationPath
 from embit.transaction import Transaction, TransactionInput, TransactionOutput
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from lnbits.helpers import urlsafe_short_hash
+from lnbits.utils.safe_http import SafeHttpClient
 
 from .crud import (
     create_fresh_addresses,
@@ -391,14 +391,14 @@ async def api_tx_broadcast(
             if config.network == "Mainnet"
             else config.mempool_endpoint + "/testnet"
         )
-        async with httpx.AsyncClient() as client:
+        async with SafeHttpClient() as client:
             r = await client.post(endpoint + "/api/tx", content=data.tx_hex)
             r.raise_for_status()
             tx_id = r.text
             return tx_id
     except Exception as exc:
         raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)
+            status_code=HTTPStatus.BAD_REQUEST, detail="Transaction broadcast failed."
         ) from exc
 
 
