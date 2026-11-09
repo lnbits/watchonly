@@ -40,6 +40,7 @@ def broadcast_env(monkeypatch):
 
     async def resolve(self, host, port, **kwargs):
         address = destinations.get(host, host)
+        assert address is not None
         try:
             ipaddress.ip_address(address)
         except ValueError:
