@@ -391,7 +391,9 @@ async def api_tx_broadcast(
             if config.network == "Mainnet"
             else config.mempool_endpoint + "/testnet"
         )
-        async with SafeHttpClient() as client:
+        # A broadcast is not a callback URL: keep destination/self-target checks
+        # but do not couple the mempool endpoint to admin callback URL rules.
+        async with SafeHttpClient(apply_callback_rules=False) as client:
             r = await client.post(endpoint + "/api/tx", content=data.tx_hex)
             r.raise_for_status()
             tx_id = r.text

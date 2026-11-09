@@ -82,6 +82,14 @@ You can now use this wallet on the LNbits [SatsPayServer](https://github.com/lnb
   - it can be refreshed
   - warnings are shown if the fee is too Low or to High
 
+### Mempool endpoint
+
+- the configurable mempool endpoint (default `https://mempool.space`) is used for transaction broadcast and for the explorer links shown in the browser
+- signed transactions are broadcast server-side to `<mempool_endpoint>/api/tx`; for `Testnet` the `/testnet` path is appended to the configured endpoint
+- broadcast requires a **public** endpoint. Loopback, LAN, private, link-local/cloud-metadata addresses and this LNbits instance's own URL (`LNBITS_BASEURL`) are rejected by the outbound protection, and the API returns a generic `Transaction broadcast failed.` error
+- self-hosted Mempool instances therefore need a publicly reachable URL if their users should broadcast; explorer and address links still work with any URL because they are opened client-side by the browser
+- broadcast destinations are not restricted by the administrator's LNbits callback URL rules
+
 ### Check & Send
 
 - creates the PSBT and sends it to the Hardware Wallet
