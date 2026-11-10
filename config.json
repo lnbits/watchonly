@@ -1,12 +1,12 @@
 {
   "id": "watchonly",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "name": "Onchain Wallet",
   "repo": "https://github.com/lnbits/watchonly",
   "short_description": "Onchain watch only wallets",
   "description": "",
   "tile": "/watchonly/static/bitcoin-wallet.png",
-  "min_lnbits_version": "1.7.0-rc1",
+  "min_lnbits_version": "1.7.0",
   "contributors": [
     {
       "name": "motorina0",
